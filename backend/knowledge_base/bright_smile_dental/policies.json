@@ -1,0 +1,33 @@
+{
+  "appointment_booking": {
+    "method": "Phone or online request form.",
+    "note": "Appointments are not confirmed until verified by staff."
+  },
+  "cancellation_policy": {
+    "notice_required": "24 hours",
+    "fee": "$50 late cancellation fee applies if cancelled within 24 hours."
+  },
+  "insurance": {
+    "accepted": [
+      "Delta Dental",
+      "Cigna",
+      "MetLife",
+      "Aetna"
+    ],
+    "note": "Please verify your specific plan coverage with our office."
+  },
+  "payment_methods": [
+    "Cash",
+    "Credit Card",
+    "Debit Card",
+    "CareCredit"
+  ],
+  "first_visit": {
+    "arrival_time": "Please arrive 15 minutes early to complete paperwork.",
+    "items_to_bring": [
+      "Photo ID",
+      "Insurance card",
+      "List of current medications"
+    ]
+  }
+}

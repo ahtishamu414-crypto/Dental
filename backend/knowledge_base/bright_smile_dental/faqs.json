@@ -1,0 +1,24 @@
+{
+  "faqs": [
+    {
+      "question": "Do you accept emergency appointments?",
+      "answer": "Yes, we reserve slots daily for dental emergencies. Please call us immediately."
+    },
+    {
+      "question": "Do you offer payment plans?",
+      "answer": "Yes, we work with CareCredit for financing options."
+    },
+    {
+      "question": "Is parking available?",
+      "answer": "Yes, there is a parking garage located directly beneath our building."
+    },
+    {
+      "question": "Do you treat children?",
+      "answer": "Yes, we welcome patients of all ages starting from 5 years old."
+    },
+    {
+      "question": "What should I do if I have a dental emergency?",
+      "answer": "Call our office immediately. If it is life-threatening, call 911."
+    }
+  ]
+}

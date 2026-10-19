@@ -1,0 +1,39 @@
+{
+  "services": [
+    {
+      "name": "General Checkup",
+      "description": "Comprehensive oral examination including X-rays.",
+      "price": "$150"
+    },
+    {
+      "name": "Professional Cleaning",
+      "description": "Removal of plaque and tartar by a hygienist.",
+      "price": "$200"
+    },
+    {
+      "name": "Teeth Whitening",
+      "description": "Professional in-office whitening treatment.",
+      "price": "$450"
+    },
+    {
+      "name": "Dental Fillings",
+      "description": "Composite resin fillings for cavities.",
+      "price": "$250 per tooth"
+    },
+    {
+      "name": "Root Canal Therapy",
+      "description": "Treatment to save infected teeth.",
+      "price": "$1,200"
+    },
+    {
+      "name": "Tooth Extraction",
+      "description": "Simple extraction of non-restorable teeth.",
+      "price": "$300"
+    },
+    {
+      "name": "Orthodontic Consultation",
+      "description": "Initial assessment for braces or aligners.",
+      "price": "$100"
+    }
+  ]
+}

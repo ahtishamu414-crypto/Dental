@@ -1,0 +1,40 @@
+{
+  "clinic_name": "Bright Smile Dental",
+  "tagline": "Your partner in oral health",
+  "address": {
+    "street": "123 Demo Avenue",
+    "city": "New York",
+    "state": "NY",
+    "zip": "10001",
+    "country": "USA"
+  },
+  "contact": {
+    "phone": "(212) 555-0199",
+    "email": "hello@brightsmiledental.demo",
+    "website": "www.brightsmiledental.demo"
+  },
+  "opening_hours": {
+    "monday": "9:00 AM - 6:00 PM",
+    "tuesday": "9:00 AM - 6:00 PM",
+    "wednesday": "9:00 AM - 6:00 PM",
+    "thursday": "9:00 AM - 8:00 PM",
+    "friday": "9:00 AM - 5:00 PM",
+    "saturday": "10:00 AM - 2:00 PM",
+    "sunday": "Closed"
+  },
+  "location_description": "Located in Midtown Manhattan, near the Demo Subway Station (Lines 1, 2, 3).",
+  "doctors": [
+    {
+      "name": "Dr. Sarah Jenkins",
+      "specialty": "General & Preventative Dentistry"
+    },
+    {
+      "name": "Dr. Michael Chen",
+      "specialty": "Orthodontics & Cosmetic Dentistry"
+    },
+    {
+      "name": "Dr. Emily Rodriguez",
+      "specialty": "Oral Surgery & Endodontics"
+    }
+  ]
+}
