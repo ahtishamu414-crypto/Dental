@@ -329,6 +329,33 @@ class AppointmentService:
         
         return appointments
 
+    async def get_appointments_by_email(
+        self,
+        email: str,
+        limit: int = 100
+    ) -> List[AppointmentDocument]:
+        """
+        Retrieve appointments for a specific patient by email address.
+        
+        Args:
+            email: Patient's email address
+            limit: Maximum number of results
+            
+        Returns:
+            List of AppointmentDocument objects
+        """
+        documents = await self.collection.find(
+            {"patient_email": {"$regex": f"^{email.strip()}$", "$options": "i"}}
+        ).sort("created_at", -1).limit(limit).to_list(length=limit)
+        
+        appointments = []
+        for doc in documents:
+            doc["id"] = str(doc["_id"])
+            del doc["_id"]
+            appointments.append(AppointmentDocument(**doc))
+        
+        return appointments
+
 
 # Global service instance
 _appointment_service: Optional[AppointmentService] = None

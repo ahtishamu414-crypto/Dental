@@ -9,7 +9,7 @@ export default function PatientDashboard({ onOpenModal }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    appointmentsAPI.getAll()
+    appointmentsAPI.getMy()
       .then((res) => setAppointments(res.data?.appointments || []))
       .catch(() => setAppointments([]))
       .finally(() => setLoading(false));

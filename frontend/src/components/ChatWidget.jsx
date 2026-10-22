@@ -41,12 +41,13 @@ export default function ChatWidget() {
     const userText = text.trim();
     if (!userText || loading) return;
 
+    const nextHistory = [...messages, { role: 'user', content: userText }];
     setInput('');
-    setMessages((prev) => [...prev, { role: 'user', content: userText }]);
+    setMessages(nextHistory);
     setLoading(true);
 
     try {
-      const res = await chatAPI.sendMessage(userText);
+      const res = await chatAPI.sendMessage(userText, nextHistory);
       if (res.data?.success) {
         setMessages((prev) => [...prev, { role: 'assistant', content: res.data.ai_response }]);
       } else {

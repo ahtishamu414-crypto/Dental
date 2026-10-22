@@ -18,30 +18,13 @@ from backend.services.appointment_service import get_appointment_service
 from backend.services.email_service import get_email_service
 from backend.services.database import connect_to_database
 from backend.services.user_service import get_user_service
-from backend.services.auth_service import get_current_user_from_token
-from fastapi.security import OAuth2PasswordBearer
+from backend.routers.auth import get_current_user, get_optional_user
 
 router = APIRouter(
     prefix="/api/appointments",
     tags=["Appointments"],
     responses={404: {"description": "Appointment not found"}}
 )
-
-# OAuth2 scheme for optional authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
-
-
-async def get_optional_user(token: str = Depends(oauth2_scheme)) -> Optional[dict]:
-    """
-    Get current user if token is provided, otherwise return None.
-    
-    Used for endpoints that work for both authenticated and guest users.
-    """
-    if token is None:
-        return None
-    
-    user = get_current_user_from_token(token)
-    return user
 
 
 @router.get(
@@ -187,26 +170,23 @@ async def create_appointment(
     "/",
     response_model=AppointmentListResponse,
     summary="List All Appointments",
-    description="Retrieve all appointments (admin use). Requires authentication."
+    description="Retrieve all appointments (clinic staff/admin only). Requires authentication."
 )
 async def list_appointments(
     limit: int = 100,
-    current_user: Optional[dict] = Depends(get_optional_user)
+    current_user: dict = Depends(get_current_user)
 ) -> AppointmentListResponse:
     """
-    Get all appointments for admin dashboard.
-    
-    ⚠️ In production, this should require admin authentication.
+    Get all appointments for clinic admin/staff dashboard.
     """
     try:
-        await connect_to_database()
-        
-        # Optional: Check if user is admin
-        if current_user and current_user.get("role") != "admin":
+        if current_user.get("role") not in ["admin", "staff"]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Admin access required"
+                detail="Admin or staff privileges required"
             )
+
+        await connect_to_database()
         
         service = get_appointment_service()
         appointments = await service.get_all_appointments(limit=limit)
@@ -228,14 +208,59 @@ async def list_appointments(
 
 
 @router.get(
+    "/my",
+    response_model=AppointmentListResponse,
+    summary="Get Current Patient Appointments",
+    description="Retrieve appointments for the authenticated patient."
+)
+async def get_my_appointments(
+    limit: int = 50,
+    current_user: dict = Depends(get_current_user)
+) -> AppointmentListResponse:
+    """
+    Get appointments for the logged-in patient using their account email.
+    """
+    try:
+        user_email = current_user.get("email")
+        if not user_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Patient email not found in session."
+            )
+
+        await connect_to_database()
+        service = get_appointment_service()
+        appointments = await service.get_appointments_by_email(user_email, limit=limit)
+        
+        return AppointmentListResponse(
+            success=True,
+            total=len(appointments),
+            appointments=[app.model_dump() for app in appointments]
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error getting patient appointments: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve your appointments."
+        )
+
+
+@router.get(
     "/{appointment_id}",
     response_model=AppointmentDocument,
     summary="Get Appointment by ID",
     description="Retrieve a specific appointment by its MongoDB ID."
 )
-async def get_appointment(appointment_id: str) -> AppointmentDocument:
+async def get_appointment(
+    appointment_id: str,
+    current_user: dict = Depends(get_current_user)
+) -> AppointmentDocument:
     """
     Get a single appointment by ID.
+    Enforces authorization: staff/admin can view any appointment, patients can only view their own.
     """
     try:
         await connect_to_database()
@@ -247,6 +272,15 @@ async def get_appointment(appointment_id: str) -> AppointmentDocument:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Appointment not found"
+            )
+
+        # Patient access restriction
+        user_role = current_user.get("role")
+        user_email = (current_user.get("email") or "").strip().lower()
+        if user_role not in ["admin", "staff"] and appointment.patient_email.strip().lower() != user_email:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to view this appointment."
             )
         
         return appointment
@@ -265,16 +299,23 @@ async def get_appointment(appointment_id: str) -> AppointmentDocument:
     "/status/{status}",
     response_model=AppointmentListResponse,
     summary="Get Appointments by Status",
-    description="Filter appointments by status (pending, confirmed, cancelled, etc.)."
+    description="Filter appointments by status (pending, confirmed, cancelled, etc.). Admin/staff only."
 )
 async def get_appointments_by_status(
     status: AppointmentStatus,
-    limit: int = 50
+    limit: int = 50,
+    current_user: dict = Depends(get_current_user)
 ) -> AppointmentListResponse:
     """
-    Get appointments filtered by status.
+    Get appointments filtered by status (admin/staff use).
     """
     try:
+        if current_user.get("role") not in ["admin", "staff"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin or staff privileges required"
+            )
+
         await connect_to_database()
         
         service = get_appointment_service()
@@ -286,6 +327,8 @@ async def get_appointments_by_status(
             appointments=[app.model_dump() for app in appointments]
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error getting appointments by status: {e}")
         raise HTTPException(
@@ -298,11 +341,12 @@ async def get_appointments_by_status(
     "/{appointment_id}/status",
     response_model=AppointmentDocument,
     summary="Update Appointment Status",
-    description="Update appointment status (confirm, cancel, reschedule). Admin use."
+    description="Update appointment status (confirm, cancel, reschedule). Admin/staff use."
 )
 async def update_appointment_status(
     appointment_id: str,
-    update_request: UpdateAppointmentStatusRequest
+    update_request: UpdateAppointmentStatusRequest,
+    current_user: dict = Depends(get_current_user)
 ) -> AppointmentDocument:
     """
     Update the status of an appointment.
@@ -311,6 +355,12 @@ async def update_appointment_status(
     Sends email notification to patient on status change.
     """
     try:
+        if current_user.get("role") not in ["admin", "staff"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin or staff privileges required"
+            )
+
         await connect_to_database()
         
         service = get_appointment_service()
@@ -329,7 +379,7 @@ async def update_appointment_status(
         appointment = await service.update_appointment_status(
             appointment_id,
             update_request.status,
-            confirmed_by=update_request.confirmed_by,
+            confirmed_by=update_request.confirmed_by or current_user.get("email"),
             notes=update_request.notes
         )
         
@@ -383,13 +433,22 @@ async def update_appointment_status(
     summary="Delete Appointment",
     description="Delete an appointment from the database. Admin use."
 )
-async def delete_appointment(appointment_id: str) -> dict:
+async def delete_appointment(
+    appointment_id: str,
+    current_user: dict = Depends(get_current_user)
+) -> dict:
     """
     Delete an appointment permanently.
     
-    ⚠️ This action cannot be undone.
+    ⚠️ This action cannot be undone. Requires admin role.
     """
     try:
+        if current_user.get("role") not in ["admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only clinic administrators can delete appointment records."
+            )
+
         await connect_to_database()
         
         service = get_appointment_service()
@@ -420,15 +479,25 @@ async def delete_appointment(appointment_id: str) -> dict:
     "/date/{date}",
     response_model=AppointmentListResponse,
     summary="Get Appointments by Date",
-    description="Retrieve all appointments for a specific date."
+    description="Retrieve all appointments for a specific date. Admin/staff use."
 )
-async def get_appointments_by_date(date: str, limit: int = 50) -> AppointmentListResponse:
+async def get_appointments_by_date(
+    date: str,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_user)
+) -> AppointmentListResponse:
     """
     Get all appointments for a specific date.
     
     Date format: YYYY-MM-DD (e.g., 2026-10-25)
     """
     try:
+        if current_user.get("role") not in ["admin", "staff"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin or staff privileges required"
+            )
+
         await connect_to_database()
         
         service = get_appointment_service()
@@ -440,6 +509,8 @@ async def get_appointments_by_date(date: str, limit: int = 50) -> AppointmentLis
             appointments=[app.model_dump() for app in appointments]
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error getting appointments by date: {e}")
         raise HTTPException(

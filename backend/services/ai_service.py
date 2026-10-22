@@ -1,4 +1,5 @@
 import os
+from typing import Optional, List, Dict, Any
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 
@@ -17,9 +18,12 @@ client = AsyncOpenAI(
 )
 
 
-async def generate_response(message: str) -> str:
+async def generate_response(
+    message: Optional[str] = None,
+    messages: Optional[List[Dict[str, str]]] = None
+) -> str:
     """
-    Generate an AI response using live MongoDB clinic knowledge.
+    Generate an AI response using live MongoDB clinic knowledge and multi-turn context.
     """
     # Fetch live prompt from MongoDB
     knowledge_service = get_knowledge_service("bright_smile_dental")
@@ -79,12 +83,21 @@ If the user needs human assistance, provide:
 - Email: hello@brightsmiledental.demo
 """
 
+    conversation = [{"role": "system", "content": system_prompt}]
+
+    if messages and len(messages) > 0:
+        recent = messages[-10:]
+        for m in recent:
+            role = m.get("role")
+            content = m.get("content")
+            if role in ["user", "assistant"] and content:
+                conversation.append({"role": role, "content": str(content)})
+    elif message:
+        conversation.append({"role": "user", "content": str(message)})
+
     response = await client.chat.completions.create(
         model="openai/gpt-oss-20b",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": message}
-        ],
+        messages=conversation,
         max_tokens=400,
         temperature=0.3
     )

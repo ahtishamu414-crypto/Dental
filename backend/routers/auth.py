@@ -53,6 +53,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    if not user.get("email"):
+        try:
+            service = get_user_service()
+            db_user = await service.get_user_by_id(user["id"])
+            if db_user:
+                user["email"] = db_user.email
+        except Exception:
+            pass
+    
     return user
 
 

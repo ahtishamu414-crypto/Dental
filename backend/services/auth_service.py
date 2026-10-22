@@ -130,6 +130,7 @@ def get_current_user_from_token(token: str) -> Optional[dict]:
     
     user_id = payload.get("sub")
     user_role = payload.get("role")
+    user_email = payload.get("email")
     
     if user_id is None or user_role is None:
         return None
@@ -137,5 +138,6 @@ def get_current_user_from_token(token: str) -> Optional[dict]:
     return {
         "id": user_id,
         "role": user_role,
+        "email": user_email,
         "exp": payload.get("exp")
     }

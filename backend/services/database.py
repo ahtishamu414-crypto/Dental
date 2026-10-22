@@ -38,6 +38,9 @@ class Database:
         Raises:
             ConnectionFailure: If connection cannot be established
         """
+        if self.client is not None and self.db is not None:
+            return
+
         try:
             client_kwargs = {
                 "serverSelectionTimeoutMS": 5000
@@ -103,6 +106,11 @@ class Database:
         """Get users collection."""
         return self.get_collection("users")
 
+    @property
+    def chats(self):
+        """Get chat history collection."""
+        return self.get_collection("chats")
+
 # Global database instance
 _db: Optional[Database] = None
 
@@ -139,9 +147,4 @@ async def disconnect_from_database() -> None:
     Call this in FastAPI lifespan event.
     """
     db = get_database()
-    await db.disconnect()   
-
-@property
-def chats(self):
-    """Get chat history collection."""
-    return self.get_collection("chats")
+    await db.disconnect()

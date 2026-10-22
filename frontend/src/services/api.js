@@ -30,6 +30,7 @@ export const clinicAPI = {
 
 export const appointmentsAPI = {
   getAll: () => api.get('/appointments/'),
+  getMy: () => api.get('/appointments/my'),
   create: (data) => api.post('/appointments/', data),
   updateStatus: (id, data) => api.put(`/appointments/${id}/status`, data),
   getAvailableSlots: (date, doctor, service_type) => api.get('/appointments/available-slots', {
@@ -42,7 +43,10 @@ export const appointmentsAPI = {
 };
 
 export const chatAPI = {
-  sendMessage: (message) => api.post('/chat', { message }),
+  sendMessage: (message, history = []) => api.post('/chat', {
+    message,
+    messages: history && history.length > 0 ? history : undefined
+  }),
 };
 
 export default api;

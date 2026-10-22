@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -53,8 +54,14 @@ app.include_router(appointments.router)
 app.include_router(clinic.router)
 
 
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
 class ChatRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=2000)
+    message: Optional[str] = Field(default=None, max_length=2000)
+    messages: Optional[List[ChatMessage]] = Field(default=None)
 
 
 @app.get("/")
@@ -77,14 +84,32 @@ async def health_check():
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
     try:
-        reply = await generate_response(request.message)
+        user_msg = request.message
+        history = [m.model_dump() for m in request.messages] if request.messages else None
+
+        # Extract last message if message string is not explicitly set
+        if not user_msg and history:
+            for item in reversed(history):
+                if item.get("role") == "user":
+                    user_msg = item.get("content")
+                    break
+
+        if not user_msg and not history:
+            raise HTTPException(
+                status_code=400,
+                detail="Either 'message' or 'messages' must be provided."
+            )
+
+        reply = await generate_response(message=user_msg, messages=history)
 
         return {
             "success": True,
-            "user_message": request.message,
+            "user_message": user_msg or "",
             "ai_response": reply
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"AI API Error: {e}")
 
