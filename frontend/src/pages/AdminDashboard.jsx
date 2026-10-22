@@ -249,8 +249,8 @@ export default function AdminDashboard({ onNavigate }) {
             </div>
 
             {/* Filter buttons */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-              <div style={{ display: 'flex', gap: 6, background: 'var(--aqua-soft)', padding: 4, borderRadius: 8 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', width: '100%' }}>
+              <div style={{ display: 'flex', gap: 6, background: 'var(--aqua-soft)', padding: 4, borderRadius: 8, overflowX: 'auto', maxWidth: '100%', WebkitOverflowScrolling: 'touch' }}>
                 {[
                   { id: 'all', label: `All (${appointments.length})` },
                   { id: 'pending', label: `Pending (${pendingRequests.length})` },
@@ -271,6 +271,8 @@ export default function AdminDashboard({ onNavigate }) {
                       fontSize: '12px',
                       fontWeight: 600,
                       cursor: 'pointer',
+                      flexShrink: 0,
+                      whiteSpace: 'nowrap',
                       transition: 'all 0.15s ease'
                     }}
                   >
@@ -280,7 +282,7 @@ export default function AdminDashboard({ onNavigate }) {
               </div>
 
               {/* Search input */}
-              <div style={{ position: 'relative', width: 200 }}>
+              <div style={{ position: 'relative', minWidth: 160, flex: '1 1 180px', maxWidth: 260 }}>
                 <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
                 <input
                   type="text"

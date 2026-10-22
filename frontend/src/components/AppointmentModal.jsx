@@ -511,6 +511,13 @@ const css = `
   font-size: 9px; font-weight: 700; color: #ef4444; text-decoration: none;
 }
 .bsa-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+@media (max-width: 480px) {
+  .bsa-card { padding: 20px 14px; max-height: 94vh; }
+  .bsa-slots-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+  .bsa-input { font-size: 16px; }
+  .bsa-actions { flex-direction: column-reverse; }
+  .bsa-actions .bsa-btn { width: 100%; }
+}
 .bsa-btn {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 10px 18px; border-radius: 8px; font-size: 13.5px; font-weight: 600;

@@ -429,9 +429,23 @@ const css = `
   0%, 80%, 100% { transform: scale(0); }
   40% { transform: scale(1); }
 }
-@media (max-width: 480px) {
-  .bsc-floating-wrap { right: 16px; bottom: 16px; }
-  .bsc-box { right: 16px; bottom: 16px; height: 75vh; }
-  .bsc-greeting-bubble { max-width: calc(100vw - 32px); }
+@media (max-width: 600px) {
+  .bsc-floating-wrap { right: 14px; bottom: 14px; }
+  .bsc-box {
+    right: 0; bottom: 0; left: 0;
+    width: 100%; max-width: 100vw;
+    height: 86vh; max-height: 86vh;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -10px 40px rgba(11, 42, 74, 0.25);
+  }
+  .bsc-greeting-bubble { max-width: calc(100vw - 28px); }
+  .bsc-input { font-size: 16px; }
+  .bsc-bubble { max-width: 90%; font-size: 14px; }
+}
+@media (max-width: 400px) {
+  .bsc-launcher { padding: 6px 12px 6px 8px; gap: 8px; }
+  .bsc-launcher-icon { width: 34px; height: 34px; }
+  .bsc-launcher-title { font-size: 12.5px; }
+  .bsc-launcher-sub { font-size: 10px; }
 }
 `;

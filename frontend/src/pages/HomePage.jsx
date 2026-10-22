@@ -110,17 +110,7 @@ export default function HomePage({ onOpenModal, onNavigate }) {
       {/* 24/7 AI Receptionist Showcase */}
       <section className="section" style={{ background: '#ffffff', paddingTop: 40, paddingBottom: 40 }}>
         <div className="container">
-          <div style={{
-            background: 'linear-gradient(135deg, #e8f6f8 0%, #ffffff 55%, #f0fdf4 100%)',
-            border: '1.5px solid #bfe3e8',
-            borderRadius: 20,
-            padding: '36px 32px',
-            display: 'grid',
-            gridTemplateColumns: '1.2fr 0.8fr',
-            gap: 28,
-            alignItems: 'center',
-            boxShadow: '0 12px 36px rgba(11, 42, 74, 0.06)'
-          }}>
+          <div className="ai-showcase-panel">
             <div>
               <span className="pill" style={{ background: '#1597a5', color: '#fff', marginBottom: 12 }}>
                 ✨ 24/7 AI Dental Receptionist
