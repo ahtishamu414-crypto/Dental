@@ -1,5 +1,8 @@
 import { Heart, Scale, Award, Users, Target, Eye, Check } from 'lucide-react';
 import { IMAGES } from '../data/siteData';
+import drSarah from '../assets/images/dr-sarah-jenkins.jpg';
+import drMichael from '../assets/images/dr-michael-chen.jpg';
+import drEmily from '../assets/images/dr-emily-rodriguez.jpg';
 
 const VALUES = [
   { title: 'Compassion', desc: 'We treat every patient like family.', icon: Heart },
@@ -18,22 +21,25 @@ const WHY = [
 
 const TEAM = [
   {
-    name: 'Dr. Emily Carter, DDS',
-    role: 'Lead Cosmetic & General Dentist',
+    name: 'Dr. Sarah Jenkins, DDS',
+    role: 'Lead Preventative & General Dentist',
     experience: '14+ years experience',
-    image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=400',
+    doctorId: 'Dr. Sarah Jenkins (General & Preventative)',
+    image: drSarah,
   },
   {
     name: 'Dr. Michael Chen, DMD',
-    role: 'Orthodontist & Implant Specialist',
+    role: 'Orthodontist & Cosmetic Smile Specialist',
     experience: '10+ years experience',
-    image: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400',
+    doctorId: 'Dr. Michael Chen (Orthodontics & Cosmetic)',
+    image: drMichael,
   },
   {
-    name: 'Sophia Patel, RDH',
-    role: 'Lead Registered Dental Hygienist',
-    experience: '8+ years experience',
-    image: 'https://images.unsplash.com/photo-1594824813572-c2e0b5711204?auto=format&fit=crop&q=80&w=400',
+    name: 'Dr. Emily Rodriguez, DDS',
+    role: 'Oral Surgery & Endodontics Specialist',
+    experience: '10+ years experience',
+    doctorId: 'Dr. Emily Rodriguez (Oral Surgery & Endodontics)',
+    image: drEmily,
   },
 ];
 
@@ -104,12 +110,20 @@ export default function About({ onOpenModal }) {
           </div>
           <div className="grid-3">
             {TEAM.map((m) => (
-              <article key={m.name} className="service-card">
+              <article key={m.name} className="service-card" style={{ display: 'flex', flexDirection: 'column' }}>
                 <div className="service-photo tall" style={{ backgroundImage: `url(${m.image})` }} role="img" aria-label={m.name} />
-                <div className="team-body">
-                  <span className="badge badge-pending">{m.experience}</span>
-                  <h3>{m.name}</h3>
-                  <p>{m.role}</p>
+                <div className="team-body" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <span className="badge badge-pending" style={{ alignSelf: 'flex-start' }}>{m.experience}</span>
+                  <h3 style={{ marginTop: 8 }}>{m.name}</h3>
+                  <p style={{ marginBottom: 16 }}>{m.role}</p>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    style={{ marginTop: 'auto', width: '100%' }}
+                    onClick={() => onOpenModal(null, m.doctorId)}
+                  >
+                    Book with {m.name.split(',')[0]} →
+                  </button>
                 </div>
               </article>
             ))}

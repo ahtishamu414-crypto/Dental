@@ -1,16 +1,28 @@
 import { useState, useEffect } from 'react';
 import { 
   ArrowLeft, LogOut, Settings, CheckCircle2, Info, UserPlus, 
-  Calendar, Clock, Check, X, Search, RefreshCw, AlertCircle, FileText
+  Calendar, Clock, Check, X, Search, RefreshCw, AlertCircle,
+  DollarSign, TrendingUp, Download, CheckSquare, Square, Activity,
+  CheckCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { clinicAPI, appointmentsAPI } from '../services/api';
 import AddStaffModal from '../components/AddStaffModal';
 
+const SERVICE_PRICES = {
+  'General Checkup': 150,
+  'Professional Cleaning': 200,
+  'Teeth Whitening': 450,
+  'Dental Fillings': 250,
+  'Root Canal Therapy': 1200,
+  'Tooth Extraction': 300,
+  'Orthodontic Consultation': 180,
+};
+
 export default function AdminDashboard({ onNavigate }) {
   const { user, logout } = useAuth();
   
-  // Active Tab: 'appointments' or 'services'
+  // Active Tab: 'appointments', 'services', 'analytics', or 'activity'
   const [activeTab, setActiveTab] = useState('appointments');
   
   // Data state
@@ -18,6 +30,9 @@ export default function AdminDashboard({ onNavigate }) {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
+  
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState([]);
   
   // Filtering & search
   const [statusFilter, setStatusFilter] = useState('all');
@@ -28,17 +43,9 @@ export default function AdminDashboard({ onNavigate }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [staffOpen, setStaffOpen] = useState(false);
 
-  useEffect(() => {
-    if (!user || user.role !== 'admin') {
-      onNavigate('home');
-      return;
-    }
-    loadAllData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
   const loadAllData = async () => {
     setLoading(true);
+    setSelectedIds([]);
     try {
       const [servicesRes, apptsRes] = await Promise.allSettled([
         clinicAPI.getServices(),
@@ -58,6 +65,15 @@ export default function AdminDashboard({ onNavigate }) {
     }
   };
 
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      onNavigate('home');
+      return;
+    }
+    loadAllData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   const handlePriceUpdate = async (service, newPrice) => {
     const price = newPrice.trim();
     if (price === String(service.price)) return;
@@ -67,7 +83,7 @@ export default function AdminDashboard({ onNavigate }) {
       showToast('Price updated successfully. The AI receptionist will now use the new price.');
       const res = await clinicAPI.getServices();
       setServices(res.data || []);
-    } catch (err) {
+    } catch {
       alert('Failed to update price. Please check your connection.');
     }
   };
@@ -83,7 +99,6 @@ export default function AdminDashboard({ onNavigate }) {
 
       await appointmentsAPI.updateStatus(appointment.id, payload);
 
-      // Update local state immediately
       setAppointments((prev) =>
         prev.map((a) => (a.id === appointment.id ? { ...a, status: newStatus } : a))
       );
@@ -107,6 +122,88 @@ export default function AdminDashboard({ onNavigate }) {
     }
   };
 
+  // Bulk actions
+  const handleToggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === filteredAppointments.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredAppointments.map((a) => a.id));
+    }
+  };
+
+  const handleBulkConfirm = async () => {
+    if (selectedIds.length === 0) return;
+    const targets = appointments.filter((a) => selectedIds.includes(a.id) && a.status === 'pending');
+    if (targets.length === 0) {
+      showToast('No pending appointments in selection.');
+      return;
+    }
+    setLoading(true);
+    for (const app of targets) {
+      try {
+        await appointmentsAPI.updateStatus(app.id, {
+          status: 'confirmed',
+          confirmed_by: user?.full_name || 'Clinic Administrator',
+          notes: 'Bulk confirmed by administrator'
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    await loadAllData();
+    showToast(`✅ Successfully confirmed ${targets.length} appointments!`);
+  };
+
+  // Export to CSV
+  const handleExportCSV = (records = appointments) => {
+    const headers = [
+      'Appointment ID',
+      'Patient Name',
+      'Patient Email',
+      'Patient Phone',
+      'Service Type',
+      'Doctor Name',
+      'Preferred Date',
+      'Preferred Time',
+      'Duration (Mins)',
+      'Status',
+      'Confirmed By',
+      'Notes'
+    ];
+
+    const rows = records.map((a) => [
+      a.id,
+      `"${a.patient_name || ''}"`,
+      `"${a.patient_email || ''}"`,
+      `"${a.patient_phone || ''}"`,
+      `"${a.service_type || ''}"`,
+      `"${a.doctor_name || ''}"`,
+      a.preferred_date || '',
+      a.preferred_time || '',
+      a.duration_minutes || 30,
+      a.status || 'pending',
+      `"${a.confirmed_by || ''}"`,
+      `"${(a.notes || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `BrightSmile_Appointments_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(`📥 Exported ${records.length} appointments to CSV.`);
+  };
+
   const showToast = (msg) => {
     setMessage(msg);
     setTimeout(() => setMessage(''), 5000);
@@ -121,6 +218,11 @@ export default function AdminDashboard({ onNavigate }) {
   const confirmedVisits = appointments.filter((a) => a.status === 'confirmed');
   const cancelledVisits = appointments.filter((a) => a.status === 'cancelled');
   const completedVisits = appointments.filter((a) => a.status === 'completed');
+
+  // Revenue analytics
+  const totalPipelineRevenue = appointments.reduce((sum, a) => sum + (SERVICE_PRICES[a.service_type] || 150), 0);
+  const realizedRevenue = [...confirmedVisits, ...completedVisits].reduce((sum, a) => sum + (SERVICE_PRICES[a.service_type] || 150), 0);
+  const avgTicket = appointments.length > 0 ? Math.round(totalPipelineRevenue / appointments.length) : 180;
 
   // Filtered appointments
   const filteredAppointments = appointments.filter((a) => {
@@ -142,9 +244,12 @@ export default function AdminDashboard({ onNavigate }) {
           <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Settings size={26} color="#1597a5" /> Clinic Administration
           </h1>
-          <p>Review incoming appointment requests, accept bookings, and manage live pricing.</p>
+          <p>Real-time booking management, revenue metrics, dynamic pricing, and CSV exports.</p>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          <button type="button" onClick={() => handleExportCSV(filteredAppointments)} className="btn-secondary btn-sm" title="Export current view to CSV">
+            <Download size={14} /> Export CSV
+          </button>
           <button type="button" onClick={loadAllData} className="btn-secondary btn-sm" title="Refresh">
             <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh
           </button>
@@ -184,7 +289,7 @@ export default function AdminDashboard({ onNavigate }) {
           </div>
         </div>
 
-        <div className="metric-card">
+        <div className="metric-card" style={{ borderLeft: confirmedVisits.length > 0 ? '4px solid #10b981' : '1px solid var(--line)' }}>
           <span className="metric-icon" style={{ background: '#d6efe8', color: '#0b6b57' }}>
             <CheckCircle2 size={22} />
           </span>
@@ -195,25 +300,65 @@ export default function AdminDashboard({ onNavigate }) {
         </div>
 
         <div className="metric-card">
-          <span className="metric-icon">
-            <Calendar size={22} />
+          <span className="metric-icon" style={{ background: '#e0f2fe', color: '#0284c7' }}>
+            <DollarSign size={22} />
           </span>
           <div>
-            <div className="metric-number">{appointments.length}</div>
-            <div className="metric-label">Total Requests</div>
+            <div className="metric-number">${realizedRevenue.toLocaleString()}</div>
+            <div className="metric-label">Realized Value</div>
           </div>
         </div>
 
         <div className="metric-card">
-          <span className="metric-icon">
-            <Settings size={22} />
+          <span className="metric-icon" style={{ background: '#f0fdf4', color: '#16a34a' }}>
+            <TrendingUp size={22} />
           </span>
           <div>
-            <div className="metric-number">{services.length}</div>
-            <div className="metric-label">Active Services</div>
+            <div className="metric-number">${avgTicket}</div>
+            <div className="metric-label">Avg. Treatment</div>
           </div>
         </div>
       </div>
+
+      {/* Visual Status Distribution Bar */}
+      {appointments.length > 0 && (
+        <div className="dash-visual-bar-wrap">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--navy)' }}>Appointment Status Distribution</span>
+            <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>
+              Pipeline Value: <strong>${totalPipelineRevenue.toLocaleString()}</strong> ({appointments.length} appointments)
+            </span>
+          </div>
+          <div className="dash-progress-track">
+            <div
+              className="dash-progress-segment pending"
+              style={{ width: `${(pendingRequests.length / appointments.length) * 100}%` }}
+              title={`Pending: ${pendingRequests.length}`}
+            />
+            <div
+              className="dash-progress-segment confirmed"
+              style={{ width: `${(confirmedVisits.length / appointments.length) * 100}%` }}
+              title={`Confirmed: ${confirmedVisits.length}`}
+            />
+            <div
+              className="dash-progress-segment completed"
+              style={{ width: `${(completedVisits.length / appointments.length) * 100}%` }}
+              title={`Completed: ${completedVisits.length}`}
+            />
+            <div
+              className="dash-progress-segment cancelled"
+              style={{ width: `${(cancelledVisits.length / appointments.length) * 100}%` }}
+              title={`Cancelled: ${cancelledVisits.length}`}
+            />
+          </div>
+          <div className="dash-progress-legend">
+            <span><span className="legend-dot pending" /> Pending ({pendingRequests.length})</span>
+            <span><span className="legend-dot confirmed" /> Confirmed ({confirmedVisits.length})</span>
+            <span><span className="legend-dot completed" /> Completed ({completedVisits.length})</span>
+            <span><span className="legend-dot cancelled" /> Cancelled ({cancelledVisits.length})</span>
+          </div>
+        </div>
+      )}
 
       {/* Main Tab Navigation */}
       <div className="tab-nav">
@@ -229,6 +374,13 @@ export default function AdminDashboard({ onNavigate }) {
         </button>
         <button
           type="button"
+          className={`tab-btn ${activeTab === 'activity' ? 'active' : ''}`}
+          onClick={() => setActiveTab('activity')}
+        >
+          <Activity size={16} /> Live Activity Feed
+        </button>
+        <button
+          type="button"
           className={`tab-btn ${activeTab === 'services' ? 'active' : ''}`}
           onClick={() => setActiveTab('services')}
         >
@@ -237,7 +389,9 @@ export default function AdminDashboard({ onNavigate }) {
         </button>
       </div>
 
-      {/* TAB 1: APPOINTMENT REQUESTS */}
+      {/* =========================================================================
+         TAB 1: APPOINTMENT REQUESTS
+         ========================================================================= */}
       {activeTab === 'appointments' && (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--line)', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
@@ -248,7 +402,7 @@ export default function AdminDashboard({ onNavigate }) {
               </p>
             </div>
 
-            {/* Filter buttons */}
+            {/* Filter buttons & Search */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', width: '100%' }}>
               <div style={{ display: 'flex', gap: 6, background: 'var(--aqua-soft)', padding: 4, borderRadius: 8, overflowX: 'auto', maxWidth: '100%', WebkitOverflowScrolling: 'touch' }}>
                 {[
@@ -263,7 +417,7 @@ export default function AdminDashboard({ onNavigate }) {
                     type="button"
                     onClick={() => setStatusFilter(tab.id)}
                     style={{
-                      padding: '5px 12px',
+                      padding: '6px 12px',
                       borderRadius: 6,
                       border: 'none',
                       background: statusFilter === tab.id ? 'var(--teal)' : 'transparent',
@@ -282,167 +436,383 @@ export default function AdminDashboard({ onNavigate }) {
               </div>
 
               {/* Search input */}
-              <div style={{ position: 'relative', minWidth: 160, flex: '1 1 180px', maxWidth: 260 }}>
+              <div style={{ position: 'relative', minWidth: 160, flex: '1 1 180px', maxWidth: 280 }}>
                 <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
                 <input
                   type="text"
-                  placeholder="Search patient..."
+                  placeholder="Search patient, doctor, service..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="form-input"
-                  style={{ paddingLeft: 30, paddingVertical: 6, fontSize: '12.5px', height: 32 }}
+                  style={{ paddingLeft: 30, paddingVertical: 6, fontSize: '12.5px', height: 34 }}
                 />
               </div>
+
+              {(searchQuery || statusFilter !== 'all') && (
+                <button
+                  type="button"
+                  className="btn-link"
+                  style={{ fontSize: '12px', color: 'var(--teal)' }}
+                  onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
+                >
+                  Reset filters
+                </button>
+              )}
             </div>
           </div>
 
+          {/* Bulk Action Toolbar */}
+          {selectedIds.length > 0 && (
+            <div className="dash-bulk-bar">
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#0b2a4a' }}>
+                {selectedIds.length} appointment{selectedIds.length > 1 ? 's' : ''} selected
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  className="btn-primary btn-sm btn-success"
+                  onClick={handleBulkConfirm}
+                >
+                  <CheckCheck size={14} /> Bulk Accept ({selectedIds.length})
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  onClick={() => handleExportCSV(appointments.filter((a) => selectedIds.includes(a.id)))}
+                >
+                  <Download size={14} /> Export Selected
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  onClick={() => setSelectedIds([])}
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+          )}
+
           {loading ? (
-            <p className="small-note" style={{ textAlign: 'center', padding: 50 }}>Loading appointment requests…</p>
+            <div style={{ padding: 24 }}>
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="dash-skeleton-row" />
+              ))}
+            </div>
           ) : filteredAppointments.length === 0 ? (
             <div className="empty-state" style={{ margin: 24 }}>
               <Calendar size={36} />
               <p>No appointment requests found.</p>
               <p className="small-note">
-                {statusFilter !== 'all' ? `No appointments with status "${statusFilter}".` : 'No bookings have been made yet.'}
+                {searchQuery || statusFilter !== 'all'
+                  ? `No appointments matching search "${searchQuery}" with status "${statusFilter}".`
+                  : 'No bookings have been made yet.'}
               </p>
+              {(searchQuery || statusFilter !== 'all') && (
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
+                >
+                  Clear search filters
+                </button>
+              )}
             </div>
           ) : (
-            <div className="table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '22%' }}>Patient Information</th>
-                    <th style={{ width: '20%' }}>Requested Service</th>
-                    <th style={{ width: '18%' }}>Preferred Schedule</th>
-                    <th style={{ width: '15%' }}>Status</th>
-                    <th style={{ width: '25%', textAlign: 'right' }}>Admin Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAppointments.map((app) => (
-                    <tr key={app.id}>
-                      <td>
-                        <div style={{ fontWeight: 700, color: 'var(--navy)' }}>{app.patient_name}</div>
-                        <div className="small-note">{app.patient_email}</div>
-                        <div className="small-note">{app.patient_phone}</div>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <strong>{app.service_type}</strong>
-                          {app.duration_minutes && (
-                            <span style={{ fontSize: '11px', background: '#e8f6f8', color: '#1597a5', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
-                              {app.duration_minutes}m
-                            </span>
-                          )}
-                        </div>
-                        <div className="small-note" style={{ color: '#0b2a4a', fontWeight: 600, marginTop: 3 }}>
-                          👨‍⚕️ {app.doctor_name || 'Any Available Doctor'}
-                        </div>
-                        {app.notes && (
-                          <div className="small-note" style={{ marginTop: 4, fontStyle: 'italic', background: '#f8fafc', padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
-                            "{app.notes}"
-                          </div>
+            <>
+              {/* Responsive Cards for Mobile View (< 768px) */}
+              <div className="dash-mobile-cards">
+                {filteredAppointments.map((app) => (
+                  <div key={app.id} className="dash-mobile-card">
+                    <div className="dash-mobile-card-head">
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--navy)' }}>{app.patient_name}</div>
+                        <div className="small-note">{app.patient_email} • {app.patient_phone}</div>
+                      </div>
+                      <span className={`badge badge-${app.status}`}>{app.status}</span>
+                    </div>
+
+                    <div className="dash-mobile-card-body">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <strong>{app.service_type}</strong>
+                        {app.duration_minutes && (
+                          <span style={{ fontSize: '11px', background: '#e8f6f8', color: '#1597a5', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
+                            {app.duration_minutes}m
+                          </span>
                         )}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
-                          <Calendar size={13} color="var(--teal)" /> {app.preferred_date}
+                      </div>
+                      <div className="small-note" style={{ color: 'var(--teal-dark)', fontWeight: 600 }}>
+                        👨‍⚕️ {app.doctor_name || 'Any Available Doctor'}
+                      </div>
+                      <div className="small-note" style={{ marginTop: 4 }}>
+                        📅 <strong>{app.preferred_date}</strong> at <strong>{app.preferred_time}</strong>
+                      </div>
+                      {app.notes && (
+                        <div className="small-note" style={{ marginTop: 6, fontStyle: 'italic', background: '#f8fafc', padding: '6px 8px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                          "{app.notes}"
                         </div>
-                        <div className="small-note" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                          <Clock size={12} color="var(--muted)" /> {app.preferred_time}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`badge badge-${app.status}`}>
-                          {app.status}
+                      )}
+                    </div>
+
+                    <div className="dash-mobile-card-actions">
+                      {app.status === 'pending' && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={updatingId === app.id}
+                            onClick={() => handleUpdateStatus(app, 'confirmed')}
+                            className="btn-primary btn-sm btn-success"
+                            style={{ flex: 1 }}
+                          >
+                            <Check size={14} /> Accept Request
+                          </button>
+                          <button
+                            type="button"
+                            disabled={updatingId === app.id}
+                            onClick={() => handleUpdateStatus(app, 'cancelled')}
+                            className="btn-secondary btn-sm btn-danger"
+                          >
+                            <X size={14} /> Decline
+                          </button>
+                        </>
+                      )}
+                      {app.status === 'confirmed' && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={updatingId === app.id}
+                            onClick={() => handleUpdateStatus(app, 'completed')}
+                            className="btn-secondary btn-sm"
+                            style={{ borderColor: 'var(--teal)', color: 'var(--teal)', flex: 1 }}
+                          >
+                            <CheckCircle2 size={13} /> Complete Visit
+                          </button>
+                          <button
+                            type="button"
+                            disabled={updatingId === app.id}
+                            onClick={() => handleUpdateStatus(app, 'cancelled')}
+                            className="btn-secondary btn-sm btn-danger"
+                          >
+                            <X size={13} /> Cancel
+                          </button>
+                        </>
+                      )}
+                      {app.status === 'cancelled' && (
+                        <button
+                          type="button"
+                          disabled={updatingId === app.id}
+                          onClick={() => handleUpdateStatus(app, 'pending')}
+                          className="btn-secondary btn-sm"
+                          style={{ width: '100%' }}
+                        >
+                          Restore to Pending
+                        </button>
+                      )}
+                      {app.status === 'completed' && (
+                        <span className="small-note" style={{ color: '#0b6b57', fontWeight: 600 }}>
+                          ✓ Patient visit completed
                         </span>
-                        {app.confirmed_by && (
-                          <div className="small-note" style={{ marginTop: 4 }}>
-                            by {app.confirmed_by}
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                          {/* If pending: show Accept (Confirm) and Decline */}
-                          {app.status === 'pending' && (
-                            <>
-                              <button
-                                type="button"
-                                disabled={updatingId === app.id}
-                                onClick={() => handleUpdateStatus(app, 'confirmed')}
-                                className="btn-primary btn-sm btn-success"
-                                title="Accept this appointment request and dispatch patient confirmation email"
-                              >
-                                <Check size={14} /> Accept Request
-                              </button>
-                              <button
-                                type="button"
-                                disabled={updatingId === app.id}
-                                onClick={() => handleUpdateStatus(app, 'cancelled')}
-                                className="btn-secondary btn-sm btn-danger"
-                                title="Decline this request"
-                              >
-                                <X size={14} /> Decline
-                              </button>
-                            </>
-                          )}
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-                          {/* If confirmed: show Mark Completed or Cancel */}
-                          {app.status === 'confirmed' && (
-                            <>
-                              <button
-                                type="button"
-                                disabled={updatingId === app.id}
-                                onClick={() => handleUpdateStatus(app, 'completed')}
-                                className="btn-secondary btn-sm"
-                                style={{ borderColor: 'var(--teal)', color: 'var(--teal)' }}
-                                title="Mark treatment completed"
-                              >
-                                <CheckCircle2 size={13} /> Complete Visit
-                              </button>
-                              <button
-                                type="button"
-                                disabled={updatingId === app.id}
-                                onClick={() => handleUpdateStatus(app, 'cancelled')}
-                                className="btn-secondary btn-sm btn-danger"
-                                title="Cancel confirmed visit"
-                              >
-                                <X size={13} /> Cancel
-                              </button>
-                            </>
+              {/* Data Table for Desktop Screens (>= 768px) */}
+              <div className="table-wrap dash-desktop-table">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '5%', textAlign: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={handleSelectAll}
+                          style={{ background: 'none', border: 0, cursor: 'pointer', color: 'var(--teal)' }}
+                          title="Select all"
+                        >
+                          {selectedIds.length === filteredAppointments.length && filteredAppointments.length > 0 ? (
+                            <CheckSquare size={16} />
+                          ) : (
+                            <Square size={16} />
                           )}
-
-                          {/* If cancelled: option to restore */}
-                          {app.status === 'cancelled' && (
+                        </button>
+                      </th>
+                      <th style={{ width: '22%' }}>Patient Information</th>
+                      <th style={{ width: '20%' }}>Requested Service</th>
+                      <th style={{ width: '18%' }}>Preferred Schedule</th>
+                      <th style={{ width: '15%' }}>Status</th>
+                      <th style={{ width: '20%', textAlign: 'right' }}>Admin Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAppointments.map((app) => {
+                      const isSelected = selectedIds.includes(app.id);
+                      return (
+                        <tr key={app.id} style={{ background: isSelected ? '#f0fafb' : 'transparent' }}>
+                          <td style={{ textAlign: 'center' }}>
                             <button
                               type="button"
-                              disabled={updatingId === app.id}
-                              onClick={() => handleUpdateStatus(app, 'pending')}
-                              className="btn-secondary btn-sm"
+                              onClick={() => handleToggleSelect(app.id)}
+                              style={{ background: 'none', border: 0, cursor: 'pointer', color: isSelected ? 'var(--teal)' : 'var(--muted)' }}
                             >
-                              Restore to Pending
+                              {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
                             </button>
-                          )}
-
-                          {/* If completed */}
-                          {app.status === 'completed' && (
-                            <span className="small-note" style={{ color: '#0b6b57', fontWeight: 600 }}>
-                              ✓ Patient visit completed
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 700, color: 'var(--navy)' }}>{app.patient_name}</div>
+                            <div className="small-note">{app.patient_email}</div>
+                            <div className="small-note">{app.patient_phone}</div>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <strong>{app.service_type}</strong>
+                              {app.duration_minutes && (
+                                <span style={{ fontSize: '11px', background: '#e8f6f8', color: '#1597a5', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
+                                  {app.duration_minutes}m
+                                </span>
+                              )}
+                            </div>
+                            <div className="small-note" style={{ color: '#0b2a4a', fontWeight: 600, marginTop: 3 }}>
+                              👨‍⚕️ {app.doctor_name || 'Any Available Doctor'}
+                            </div>
+                            {app.notes && (
+                              <div className="small-note" style={{ marginTop: 4, fontStyle: 'italic', background: '#f8fafc', padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                                "{app.notes}"
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
+                              <Calendar size={13} color="var(--teal)" /> {app.preferred_date}
+                            </div>
+                            <div className="small-note" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                              <Clock size={12} color="var(--muted)" /> {app.preferred_time}
+                            </div>
+                          </td>
+                          <td>
+                            <span className={`badge badge-${app.status}`}>
+                              {app.status}
                             </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                            {app.confirmed_by && (
+                              <div className="small-note" style={{ marginTop: 4 }}>
+                                by {app.confirmed_by}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                              {app.status === 'pending' && (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={updatingId === app.id}
+                                    onClick={() => handleUpdateStatus(app, 'confirmed')}
+                                    className="btn-primary btn-sm btn-success"
+                                    title="Accept this appointment request and dispatch patient confirmation email"
+                                  >
+                                    <Check size={14} /> Accept Request
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={updatingId === app.id}
+                                    onClick={() => handleUpdateStatus(app, 'cancelled')}
+                                    className="btn-secondary btn-sm btn-danger"
+                                    title="Decline this request"
+                                  >
+                                    <X size={14} /> Decline
+                                  </button>
+                                </>
+                              )}
+
+                              {app.status === 'confirmed' && (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={updatingId === app.id}
+                                    onClick={() => handleUpdateStatus(app, 'completed')}
+                                    className="btn-secondary btn-sm"
+                                    style={{ borderColor: 'var(--teal)', color: 'var(--teal)' }}
+                                    title="Mark treatment completed"
+                                  >
+                                    <CheckCircle2 size={13} /> Complete Visit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={updatingId === app.id}
+                                    onClick={() => handleUpdateStatus(app, 'cancelled')}
+                                    className="btn-secondary btn-sm btn-danger"
+                                    title="Cancel confirmed visit"
+                                  >
+                                    <X size={13} /> Cancel
+                                  </button>
+                                </>
+                              )}
+
+                              {app.status === 'cancelled' && (
+                                <button
+                                  type="button"
+                                  disabled={updatingId === app.id}
+                                  onClick={() => handleUpdateStatus(app, 'pending')}
+                                  className="btn-secondary btn-sm"
+                                >
+                                  Restore to Pending
+                                </button>
+                              )}
+
+                              {app.status === 'completed' && (
+                                <span className="small-note" style={{ color: '#0b6b57', fontWeight: 600 }}>
+                                  ✓ Patient visit completed
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}
 
-      {/* TAB 2: DENTAL SERVICES & DYNAMIC PRICING */}
+      {/* =========================================================================
+         TAB 2: REAL-TIME ACTIVITY FEED
+         ========================================================================= */}
+      {activeTab === 'activity' && (
+        <div className="card" style={{ padding: 24 }}>
+          <div style={{ marginBottom: 20 }}>
+            <h3 style={{ fontSize: '1.15rem' }}>Live Clinic Activity Feed</h3>
+            <p className="small-note" style={{ marginTop: 2 }}>
+              Chronological log of patient appointments, confirmations, and administrative updates.
+            </p>
+          </div>
+
+          <div className="dash-activity-list">
+            {appointments.slice(0, 10).map((app, i) => (
+              <div key={app.id || i} className="dash-activity-item">
+                <span className={`dash-activity-dot ${app.status}`} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '13.5px', color: 'var(--navy)' }}>
+                    <strong>{app.patient_name}</strong> requested <strong>{app.service_type}</strong> with <em>{app.doctor_name || 'Any Doctor'}</em>
+                  </div>
+                  <div className="small-note" style={{ marginTop: 3 }}>
+                    Scheduled for {app.preferred_date} at {app.preferred_time} • Status: <span className={`badge badge-${app.status}`}>{app.status}</span>
+                  </div>
+                </div>
+                <span className="small-note" style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                  {app.confirmed_by ? `Confirmed by ${app.confirmed_by}` : 'Pending review'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+         TAB 3: DENTAL SERVICES & DYNAMIC PRICING
+         ========================================================================= */}
       {activeTab === 'services' && (
         <>
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>

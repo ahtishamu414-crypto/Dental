@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import {
   Sparkles, Smile, ShieldCheck, Crown, Stethoscope, Cpu, Armchair,
   HeartHandshake, CalendarCheck, Building2, ArrowRight,
 } from 'lucide-react';
+import heroDentalImg from '../assets/images/hero-dental.jpg';
 import { IMAGES } from '../data/siteData';
 
 const SERVICES = [
@@ -34,6 +36,9 @@ const REVIEWS = [
 const initials = (name) => name.split(' ').map((p) => p[0]).join('');
 
 export default function HomePage({ onOpenModal, onNavigate }) {
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
   const go = (page) => (e) => {
     e.preventDefault();
     onNavigate(page);
@@ -44,9 +49,11 @@ export default function HomePage({ onOpenModal, onNavigate }) {
       <section className="hero">
         <div className="container hero-grid">
           <div className="hero-copy">
-            <span className="pill">Welcome to Bright Smile Dental</span>
-            <h1>Your Smile Deserves the Best Care.</h1>
-            <p className="lead">
+            <span className="pill hero-welcome-pill">
+              <Sparkles size={14} className="hero-welcome-sparkle" /> Welcome to Bright Smile Dental
+            </span>
+            <h1 className="hero-title-reveal">Your Smile Deserves the Best Care.</h1>
+            <p className="lead hero-lead-reveal">
               Professional dental care, a welcoming experience, and convenient appointment requests.
             </p>
             <div className="hero-actions">
@@ -63,7 +70,51 @@ export default function HomePage({ onOpenModal, onNavigate }) {
               </a>
             </div>
           </div>
-          <div className="hero-photo" style={{ backgroundImage: `url(${IMAGES.hero})` }} role="img" aria-label="Smiling patient at the dentist" />
+          <div className="hero-photo-wrap">
+            <div
+              className="hero-photo-container"
+              style={{
+                backgroundImage: imgError ? `url(${IMAGES.hero})` : undefined,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            >
+              {!imgLoaded && !imgError && (
+                <div className="hero-photo-skeleton" aria-hidden="true" />
+              )}
+              {!imgError ? (
+                <img
+                  src={heroDentalImg}
+                  alt="Modern Bright Smile Dental clinic room with dentist and smiling patient receiving gentle, professional dental care"
+                  className={`hero-photo-img ${imgLoaded ? 'loaded' : ''}`}
+                  loading="eager"
+                  fetchPriority="high"
+                  onLoad={() => setImgLoaded(true)}
+                  onError={() => {
+                    setImgError(true);
+                    setImgLoaded(true);
+                  }}
+                />
+              ) : (
+                <div
+                  className="hero-photo-fallback"
+                  role="img"
+                  aria-label="Bright Smile Dental modern clinic interior"
+                >
+                  <Sparkles size={40} style={{ marginBottom: 12, opacity: 0.9 }} />
+                  <strong style={{ fontSize: '1.25rem', marginBottom: 6 }}>Bright Smile Dental</strong>
+                  <span style={{ fontSize: '0.9rem', opacity: 0.9 }}>Over 2,400+ Smiles Restored in Midtown Manhattan</span>
+                </div>
+              )}
+            </div>
+            <div className="hero-trust-badge">
+              <span className="hero-trust-star">★ 4.9</span>
+              <div>
+                <strong>Over 2,400+ Smiles Restored</strong>
+                <span>Top-rated clinic in Midtown Manhattan</span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -81,7 +132,19 @@ export default function HomePage({ onOpenModal, onNavigate }) {
                   <span className="service-icon"><Icon size={18} /></span>
                   <h3>{title}</h3>
                   <p>{desc}</p>
-                  <a href="#services" className="link-arrow" onClick={go('services')}>Learn more <ArrowRight size={13} /></a>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                    <button
+                      type="button"
+                      className="link-arrow"
+                      style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', textAlign: 'left' }}
+                      onClick={() => onOpenModal(title)}
+                    >
+                      Book this <ArrowRight size={13} />
+                    </button>
+                    <a href="#services" className="small-note" onClick={go('services')} style={{ color: 'var(--muted)' }}>
+                      Details
+                    </a>
+                  </div>
                 </div>
               </article>
             ))}

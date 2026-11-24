@@ -16,24 +16,46 @@ import AdminDashboard from './pages/AdminDashboard';
 import './styles/bright-smile.css';
 
 function App() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
   const [page, setPage] = useState('home');
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalConfig, setModalConfig] = useState({ service: null, doctor: null });
 
   // Start every page at the top
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [page]);
 
+  const openModal = (initialService = null, initialDoctor = null) => {
+    // If called directly from an event handler where first argument is synthetic event
+    const service = typeof initialService === 'string' ? initialService : null;
+    const doctor = typeof initialDoctor === 'string' ? initialDoctor : null;
+    setModalConfig({ service, doctor });
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+  };
+
   if (loading) {
     return (
-      <div style={{ display: 'grid', placeItems: 'center', height: '100vh', color: '#1597a5', fontWeight: 600, fontSize: '1.2rem' }}>
-        Loading Bright Smile Dental…
+      <div className="app-splash-screen" role="status" aria-label="Loading Bright Smile Dental">
+        <div className="app-splash-content">
+          <div className="app-splash-icon-pulse">
+            <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#1597a5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+          </div>
+          <div className="app-splash-brand">Bright Smile Dental</div>
+          <div className="app-splash-bar">
+            <div className="app-splash-progress" />
+          </div>
+        </div>
       </div>
     );
   }
 
-  const openModal = () => setModalOpen(true);
   const shared = { onNavigate: setPage, onOpenModal: openModal };
 
   const renderPage = () => {
@@ -65,13 +87,18 @@ function App() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Navbar page={page} onNavigate={setPage} onOpenModal={openModal} />
 
-      <main style={{ flex: 1 }}>{renderPage()}</main>
+      <main key={page} className="page-transition" style={{ flex: 1 }}>{renderPage()}</main>
 
       {!isAuthPage && <Footer onNavigate={setPage} />}
 
       {/* Mounted once so it stays fixed in the corner on every page */}
-      {!isAuthPage && <ChatWidget />}
-      <AppointmentModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+      {!isAuthPage && <ChatWidget onOpenModal={openModal} />}
+      <AppointmentModal
+        isOpen={modalOpen}
+        onClose={closeModal}
+        initialService={modalConfig.service}
+        initialDoctor={modalConfig.doctor}
+      />
     </div>
   );
 }

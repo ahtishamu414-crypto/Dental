@@ -15,25 +15,24 @@ export default function AddStaffModal({ isOpen, onClose, onRefresh }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const handleClose = () => {
+    setError('');
+    setFormData(EMPTY_FORM);
+    onClose();
+  };
+
   // Close on Escape
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e) => e.key === 'Escape' && handleClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   if (!isOpen) return null;
 
   const update = (field) => (e) =>
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-
-  const handleClose = () => {
-    setError('');
-    setFormData(EMPTY_FORM);
-    onClose();
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();

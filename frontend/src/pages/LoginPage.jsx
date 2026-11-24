@@ -19,7 +19,7 @@ export default function LoginPage({ onNavigate }) {
       if (res.success) {
         onNavigate(res.role === 'admin' ? 'admin' : 'home');
       }
-    } catch (err) {
+    } catch {
       setError('Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
@@ -78,8 +78,8 @@ export default function LoginPage({ onNavigate }) {
             className="btn-link"
             style={{ fontSize: '12px', color: 'var(--muted)' }}
             onClick={() => {
-              setEmail('admin@brightsmiledental.demo');
-              setPassword('adminpassword123');
+              setEmail('ahtishamu414@gmail.com');
+              setPassword('Gujjar.88');
             }}
           >
             Fill Demo Admin Credentials

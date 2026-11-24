@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { chatAPI } from '../services/api';
-import { Send, ChevronDown, Sparkles, X, MessageSquare, Bot } from 'lucide-react';
+import { Send, ChevronDown, Sparkles, X, Bot, Calendar, RotateCcw, ArrowRight } from 'lucide-react';
 
 const SUGGESTIONS = [
   'What are your service prices?',
   'Who are your clinic dentists?',
   'What are your opening hours?',
+  'How do I track my booking?',
   'Do you accept dental insurance?'
 ];
 
@@ -15,20 +16,40 @@ const WELCOME = {
   content: "👋 Hello! I'm Bright Smile Dental's 24/7 AI Receptionist.\n\nI can help you check prices, learn about our dentists, view office hours, or request an appointment. What can I help you with today?",
 };
 
-export default function ChatWidget() {
+export default function ChatWidget({ onOpenModal }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showGreeting, setShowGreeting] = useState(true);
   const [messages, setMessages] = useState([WELCOME]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   // Listen for global 'open-ai-chat' event from buttons on the site
   useEffect(() => {
-    const handleOpen = () => setIsOpen(true);
+    const handleOpen = () => {
+      setIsOpen(true);
+      setShowGreeting(false);
+    };
     window.addEventListener('open-ai-chat', handleOpen);
     return () => window.removeEventListener('open-ai-chat', handleOpen);
   }, []);
+
+  // Auto-focus input when opened
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => inputRef.current?.focus(), 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => e.key === 'Escape' && setIsOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen]);
 
   // Auto-scroll to newest message
   useEffect(() => {
@@ -57,18 +78,86 @@ export default function ChatWidget() {
         ]);
       }
     } catch (err) {
+      const errorMsg = err.response?.data?.detail || "I'm having a brief connection moment. You can reach our front desk directly at (212) 555-0199 or click 'Book Visit' above!";
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'Connection error. Please check your backend connection or try again.' }
+        { role: 'assistant', content: errorMsg }
       ]);
     } finally {
       setLoading(false);
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
   };
 
   const handleSend = (e) => {
     e?.preventDefault();
     sendMessage(input);
+  };
+
+  const handleReset = () => {
+    setMessages([WELCOME]);
+    setInput('');
+  };
+
+  // Helper to format structured list items & inject inline booking CTA
+  const renderMessageContent = (content, role) => {
+    if (role === 'user') {
+      return <span>{content}</span>;
+    }
+
+    const lines = (content || '').split('\n');
+    const elements = [];
+    let listItems = [];
+
+    const flushList = () => {
+      if (listItems.length > 0) {
+        elements.push(
+          <ul key={`ul-${elements.length}`} className="bsc-msg-list">
+            {listItems.map((item, idx) => (
+              <li key={idx} className="bsc-msg-list-item">{item}</li>
+            ))}
+          </ul>
+        );
+        listItems = [];
+      }
+    };
+
+    lines.forEach((line, idx) => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('- ') || trimmed.startsWith('• ') || trimmed.startsWith('* ')) {
+        listItems.push(trimmed.slice(2));
+      } else {
+        flushList();
+        if (trimmed) {
+          elements.push(<p key={idx} className="bsc-msg-p">{trimmed}</p>);
+        }
+      }
+    });
+    flushList();
+
+    const hasBookingHint = /book|appointment|schedule|cleanings|teeth whitening|root canal|fillings|checkup/i.test(content);
+
+    return (
+      <div className="bsc-msg-wrapper">
+        <div className="bsc-msg-body">
+          {elements.length > 0 ? elements : content}
+        </div>
+        {onOpenModal && hasBookingHint && (
+          <button
+            type="button"
+            className="bsc-msg-book-cta"
+            onClick={() => {
+              setIsOpen(false);
+              onOpenModal();
+            }}
+          >
+            <Calendar size={13} />
+            <span>Request Appointment</span>
+            <ArrowRight size={12} />
+          </button>
+        )}
+      </div>
+    );
   };
 
   return createPortal(
@@ -133,26 +222,54 @@ export default function ChatWidget() {
           <div className="bsc-header">
             <div className="bsc-header-info">
               <div className="bsc-avatar">
-                <Bot size={20} />
+                <Bot size={19} />
                 <span className="bsc-avatar-dot" />
               </div>
-              <div>
+              <div className="bsc-header-text">
                 <div className="bsc-name">
-                  Bright Smile AI Receptionist
-                  <span className="bsc-badge-ai">AI Helper</span>
+                  <span>Bright Smile AI</span>
+                  <span className="bsc-badge-ai">24/7</span>
                 </div>
-                <div className="bsc-status">● Live 24/7 Assistant • Instant Answers</div>
+                <div className="bsc-status">
+                  <span className="bsc-status-indicator">●</span> Online • Instant Answers
+                </div>
               </div>
             </div>
-            <button
-              type="button"
-              className="bsc-minimize"
-              onClick={() => setIsOpen(false)}
-              aria-label="Minimize chat"
-              title="Minimize chat"
-            >
-              <ChevronDown size={20} />
-            </button>
+
+            <div className="bsc-header-actions">
+              {onOpenModal && (
+                <button
+                  type="button"
+                  className="bsc-header-book-btn"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onOpenModal();
+                  }}
+                  title="Open appointment booking form"
+                >
+                  <Calendar size={12} />
+                  <span>Book Visit</span>
+                </button>
+              )}
+              <button
+                type="button"
+                className="bsc-header-tool-btn"
+                onClick={handleReset}
+                title="Restart chat conversation"
+                aria-label="Restart chat"
+              >
+                <RotateCcw size={15} />
+              </button>
+              <button
+                type="button"
+                className="bsc-minimize"
+                onClick={() => setIsOpen(false)}
+                aria-label="Minimize chat"
+                title="Minimize chat"
+              >
+                <ChevronDown size={19} />
+              </button>
+            </div>
           </div>
 
           {/* Quick suggestions at the top */}
@@ -179,7 +296,7 @@ export default function ChatWidget() {
           <div className="bsc-messages">
             {messages.map((m, i) => (
               <div key={i} className={`bsc-bubble bsc-${m.role}`}>
-                {m.content}
+                {renderMessageContent(m.content, m.role)}
               </div>
             ))}
             {loading && (
@@ -196,6 +313,7 @@ export default function ChatWidget() {
           {/* Input Area */}
           <form onSubmit={handleSend} className="bsc-input-area">
             <input
+              ref={inputRef}
               type="text"
               className="bsc-input"
               placeholder="Ask a question (prices, dentists, hours)..."
@@ -293,51 +411,76 @@ const css = `
   display: flex; flex-direction: column; text-align: left;
 }
 .bsc-launcher-title {
-  font-size: 13.5px; font-weight: 700; line-height: 1.2;
+  font-size: 13.5px; font-weight: 700; line-height: 1.2; color: #ffffff;
 }
-.bsc-launcher-sub {
-  font-size: 11px; opacity: 0.85; display: flex; align-items: center; gap: 4px;
+.bsc-launcher-status {
+  font-size: 11px; opacity: 0.95; color: #5eead4; font-weight: 600; margin-top: 1px;
 }
+
 .bsc-box {
   position: fixed; right: 24px; bottom: 24px; z-index: 9999;
   display: flex; flex-direction: column;
-  width: 390px; max-width: calc(100vw - 32px); height: 530px; max-height: calc(100vh - 48px);
+  width: 395px; max-width: calc(100vw - 32px);
+  height: 540px; max-height: calc(100dvh - 36px);
   overflow: hidden; background: #ffffff;
   border-radius: 18px;
   box-shadow: 0 24px 60px rgba(11, 42, 74, 0.3);
   border: 1px solid #d6e8ec;
   font-family: inherit;
-  animation: bscSlideUp 0.25s ease;
+  animation: bscSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .bsc-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 16px; background: #0b2a4a; color: #ffffff;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 11px 14px; background: linear-gradient(135deg, #0b2a4a 0%, #0f3761 100%);
+  color: #ffffff; border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
 }
-.bsc-header-info { display: flex; align-items: center; gap: 10px; }
+.bsc-header-info { display: flex; align-items: center; gap: 9px; min-width: 0; flex: 1; }
 .bsc-avatar {
   position: relative;
   display: grid; place-items: center;
-  width: 38px; height: 38px;
-  border-radius: 50%; background: #1597a5; color: #fff;
+  width: 34px; height: 34px; flex-shrink: 0;
+  border-radius: 50%; background: linear-gradient(135deg, #1597a5 0%, #0d9488 100%);
+  color: #ffffff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 .bsc-avatar-dot {
   position: absolute; bottom: 0; right: 0;
-  width: 9px; height: 9px;
+  width: 8px; height: 8px;
   background: #22c55e; border: 1.5px solid #0b2a4a; border-radius: 50%;
 }
+.bsc-header-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .bsc-name {
-  font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 5px;
+  color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25;
 }
 .bsc-badge-ai {
-  font-size: 10px; background: #1597a5; color: #fff;
-  padding: 1px 6px; border-radius: 4px; font-weight: 600;
+  font-size: 9px; background: rgba(21, 151, 165, 0.35); color: #5eead4;
+  border: 1px solid rgba(94, 234, 212, 0.3); padding: 1px 5px; border-radius: 4px;
+  font-weight: 700; flex-shrink: 0;
 }
-.bsc-status { font-size: 11px; color: #5eead4; margin-top: 1px; }
-.bsc-minimize {
-  display: grid; place-items: center; width: 32px; height: 32px;
-  border: 0; border-radius: 50%; background: transparent; color: #b8c9dc; cursor: pointer;
+.bsc-status {
+  font-size: 10.5px; color: #a5f3fc; margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; gap: 4px; line-height: 1.2;
 }
-.bsc-minimize:hover { background: rgba(255, 255, 255, 0.12); color: #ffffff; }
+.bsc-status-indicator { color: #22c55e; font-size: 8px; flex-shrink: 0; }
+.bsc-header-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.bsc-header-book-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 9px; border-radius: 999px;
+  background: #1597a5; color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.bsc-header-book-btn:hover { background: #0f7f8b; transform: translateY(-1px); }
+.bsc-header-tool-btn, .bsc-minimize {
+  display: grid; place-items: center; width: 28px; height: 28px;
+  border: 0; border-radius: 50%; background: transparent; color: #cbd5e1; cursor: pointer;
+  flex-shrink: 0; transition: all 0.15s ease;
+}
+.bsc-header-tool-btn:hover, .bsc-minimize:hover {
+  background: rgba(255, 255, 255, 0.15); color: #ffffff;
+}
 
 .bsc-chips-bar {
   padding: 10px 14px 8px; background: #f8fcfe; border-bottom: 1px solid #e2eff2;
@@ -366,8 +509,8 @@ const css = `
   display: flex; flex-direction: column; gap: 12px; background: #f8fbfd;
 }
 .bsc-bubble {
-  max-width: 85%; padding: 11px 15px; font-size: 13.5px; line-height: 1.5;
-  white-space: pre-wrap; word-wrap: break-word;
+  max-width: 86%; padding: 11px 15px; font-size: 13px; line-height: 1.5;
+  word-wrap: break-word;
 }
 .bsc-assistant {
   align-self: flex-start; background: #ffffff; color: #0b2a4a;
@@ -380,6 +523,28 @@ const css = `
   border-radius: 14px 14px 4px 14px;
   box-shadow: 0 2px 8px rgba(21, 151, 165, 0.25);
 }
+
+.bsc-msg-wrapper { display: flex; flex-direction: column; gap: 8px; }
+.bsc-msg-p { margin: 0 0 6px; }
+.bsc-msg-p:last-child { margin-bottom: 0; }
+.bsc-msg-list { margin: 4px 0 6px; padding-left: 18px; list-style-type: disc; }
+.bsc-msg-list-item { margin-bottom: 3px; font-size: 12.5px; line-height: 1.45; }
+
+.bsc-msg-book-cta {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  align-self: flex-start;
+  padding: 6px 12px; margin-top: 4px;
+  background: #e8f6f8; color: #0f766e;
+  border: 1px solid #99f6e4; border-radius: 8px;
+  font-size: 11.5px; font-weight: 700; cursor: pointer;
+  transition: all 0.15s ease;
+}
+.bsc-msg-book-cta:hover {
+  background: #1597a5; color: #ffffff; border-color: #1597a5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(21, 151, 165, 0.25);
+}
+
 .bsc-typing {
   align-self: flex-start; display: flex; align-items: center; gap: 5px;
   padding: 8px 12px; background: #ffffff; border: 1px solid #e1eef1;
@@ -407,9 +572,9 @@ const css = `
 .bsc-send {
   display: grid; place-items: center; flex: none; width: 40px; height: 40px;
   border: 0; border-radius: 50%; background: #1597a5; color: #ffffff; cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, transform 0.1s ease;
 }
-.bsc-send:hover:not(:disabled) { background: #0f7f8b; }
+.bsc-send:hover:not(:disabled) { background: #0f7f8b; transform: scale(1.05); }
 .bsc-send:disabled { opacity: 0.5; cursor: not-allowed; }
 
 @keyframes bscPulse {
@@ -429,23 +594,24 @@ const css = `
   0%, 80%, 100% { transform: scale(0); }
   40% { transform: scale(1); }
 }
+
 @media (max-width: 600px) {
   .bsc-floating-wrap { right: 14px; bottom: 14px; }
   .bsc-box {
     right: 0; bottom: 0; left: 0;
     width: 100%; max-width: 100vw;
-    height: 86vh; max-height: 86vh;
+    height: 86dvh; max-height: 86dvh;
     border-radius: 20px 20px 0 0;
     box-shadow: 0 -10px 40px rgba(11, 42, 74, 0.25);
   }
   .bsc-greeting-bubble { max-width: calc(100vw - 28px); }
   .bsc-input { font-size: 16px; }
-  .bsc-bubble { max-width: 90%; font-size: 14px; }
+  .bsc-bubble { max-width: 90%; font-size: 13.5px; }
 }
 @media (max-width: 400px) {
   .bsc-launcher { padding: 6px 12px 6px 8px; gap: 8px; }
   .bsc-launcher-icon { width: 34px; height: 34px; }
   .bsc-launcher-title { font-size: 12.5px; }
-  .bsc-launcher-sub { font-size: 10px; }
+  .bsc-launcher-status { font-size: 10px; }
 }
 `;

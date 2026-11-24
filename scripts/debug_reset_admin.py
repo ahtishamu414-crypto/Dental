@@ -8,30 +8,38 @@ async def reset_admin():
     await connect_to_database()
     service = get_user_service()
     
-    admin_email = "admin@brightsmiledental.demo"
-    new_password = "adminpassword123"
+    admin_email = "ahtishamu414@gmail.com".strip().lower()
+    new_password = "Gujjar.88"
+    admin_name = "Clinic Admin"
+    admin_phone = "03079536861"
     
     user = await service.get_user_by_email(admin_email)
     
     if user:
-        print(f"Found admin: {user.email}. Resetting password...")
+        print(f"Found admin: {user.email}. Resetting credentials...")
         hashed = get_password_hash(new_password)
         await service.collection.update_one(
             {"email": admin_email},
-            {"$set": {"hashed_password": hashed, "is_active": True}}
+            {"$set": {
+                "full_name": admin_name,
+                "hashed_password": hashed,
+                "role": UserRole.ADMIN.value,
+                "phone": admin_phone,
+                "is_active": True
+            }}
         )
-        print("✅ Password reset to 'adminpassword123'")
+        print(f"Password reset to '{new_password}' for {admin_email}")
     else:
-        print("❌ Admin user not found! Registering new one...")
+        print("Admin user not found! Registering new one...")
         new_admin = UserRegister(
-            full_name="Dr. Admin",
+            full_name=admin_name,
             email=admin_email,
             password=new_password,
             role=UserRole.ADMIN,
-            phone="1234567890"
+            phone=admin_phone
         )
         await service.create_user(new_admin)
-        print("✅ Admin user created with password 'adminpassword123'")
+        print(f"Admin user created with password '{new_password}'")
 
     await disconnect_from_database()
 

@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'; // Or use simple state navigation
+import { useLocation } from 'react-router-dom'; // Or use simple state navigation
 import { useAuth } from '../context/AuthContext';
 
 export default function Header() {

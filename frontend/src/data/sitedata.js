@@ -14,13 +14,16 @@ export const CLINIC = {
 const U = (id, w = 900) => `https://images.unsplash.com/${id}?auto=format&fit=crop&q=80&w=${w}`;
 
 export const IMAGES = {
-  hero: U('photo-1598257006475-d4561f5bb808', 1000),
+  hero: '/hero-dental.jpg',
   aboutHero: U('photo-1629909613654-28e377c37b09', 1200),
   story: U('photo-1588776814546-1ffcf47267a5'),
   whyUs: U('photo-1559839734-2b71ea197ec2'),
-  contactHero: U('photo-1594824813572-c2e0b5711204', 1000),
+  contactHero: '/hero-dental.jpg',
   cleaning: U('photo-1606811841689-23dfddce3e95', 500),
   whitening: U('photo-1609840114035-3c981b782dfe', 500),
   fillings: U('photo-1588776814546-1ffcf47267a5', 500),
   crowns: U('photo-1629909613654-28e377c37b09', 500),
+  doctorSarah: '/dr-sarah-jenkins.jpg',
+  doctorMichael: '/dr-michael-chen.jpg',
+  doctorEmily: '/dr-emily-rodriguez.jpg',
 };

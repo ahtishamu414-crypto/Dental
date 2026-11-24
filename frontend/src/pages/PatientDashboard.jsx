@@ -58,7 +58,11 @@ export default function PatientDashboard({ onOpenModal }) {
           </div>
 
           {loading ? (
-            <p className="small-note" style={{ textAlign: 'center', padding: '30px 0' }}>Loading your appointments…</p>
+            <div style={{ padding: 20 }}>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="dash-skeleton-row" style={{ height: 48, marginBottom: 12 }} />
+              ))}
+            </div>
           ) : appointments.length === 0 ? (
             <div className="empty-state">
               <Calendar size={36} />
@@ -67,44 +71,74 @@ export default function PatientDashboard({ onOpenModal }) {
               <button type="button" onClick={onOpenModal} className="btn-primary btn-sm">Schedule a visit</button>
             </div>
           ) : (
-            <div className="table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Treatment service</th>
-                    <th>Preferred date and time</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {appointments.map((item) => (
-                    <tr key={item.id}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <strong>{item.service_type}</strong>
-                          {item.duration_minutes && (
-                            <span style={{ fontSize: '11px', background: '#e8f6f8', color: '#1597a5', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
-                              {item.duration_minutes}m
-                            </span>
-                          )}
+            <>
+              {/* Mobile Card list */}
+              <div className="dash-mobile-cards" style={{ padding: 12 }}>
+                {appointments.map((item) => (
+                  <div key={item.id} className="dash-mobile-card">
+                    <div className="dash-mobile-card-head">
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '14.5px', color: 'var(--navy)' }}>
+                          {item.service_type}
                         </div>
                         {item.doctor_name && (
-                          <div className="small-note" style={{ color: '#0b2a4a', fontWeight: 500, marginTop: 2 }}>
+                          <div className="small-note" style={{ color: 'var(--teal-dark)', fontWeight: 600 }}>
                             👨‍⚕️ {item.doctor_name}
                           </div>
                         )}
-                        {item.notes && <div className="small-note">Notes: {item.notes}</div>}
-                      </td>
-                      <td>
-                        <div>{item.preferred_date}</div>
-                        <div className="small-note">{item.preferred_time}</div>
-                      </td>
-                      <td><span className={`badge badge-${item.status}`}>{item.status}</span></td>
+                      </div>
+                      <span className={`badge badge-${item.status}`}>{item.status}</span>
+                    </div>
+                    <div className="dash-mobile-card-body" style={{ marginTop: 8 }}>
+                      <div className="small-note">
+                        📅 <strong>{item.preferred_date}</strong> at <strong>{item.preferred_time}</strong>
+                      </div>
+                      {item.notes && <div className="small-note" style={{ fontStyle: 'italic', marginTop: 4 }}>Note: {item.notes}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table */}
+              <div className="table-wrap dash-desktop-table">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Treatment service</th>
+                      <th>Preferred date and time</th>
+                      <th>Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {appointments.map((item) => (
+                      <tr key={item.id}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <strong>{item.service_type}</strong>
+                            {item.duration_minutes && (
+                              <span style={{ fontSize: '11px', background: '#e8f6f8', color: '#1597a5', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>
+                                {item.duration_minutes}m
+                              </span>
+                            )}
+                          </div>
+                          {item.doctor_name && (
+                            <div className="small-note" style={{ color: '#0b2a4a', fontWeight: 500, marginTop: 2 }}>
+                              👨‍⚕️ {item.doctor_name}
+                            </div>
+                          )}
+                          {item.notes && <div className="small-note">Notes: {item.notes}</div>}
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{item.preferred_date}</div>
+                          <div className="small-note">{item.preferred_time}</div>
+                        </td>
+                        <td><span className={`badge badge-${item.status}`}>{item.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 

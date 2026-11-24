@@ -142,8 +142,8 @@ Open `http://localhost:3000` in your browser.
 
 ## 🔑 Default Credentials (Demo)
 
-- **Admin Account**: `admin@brightsmiledental.demo` / `adminpassword123`
-- Can also be reset using `python debug_reset_admin.py` or via the **Forgot password?** link on the login page.
+- **Admin Account**: `ahtishamu414@gmail.com` / `Gujjar.88`
+- Can also be reset using `python scripts/debug_reset_admin.py` or via the **Forgot password?** link on the login page.
 
 ---
 

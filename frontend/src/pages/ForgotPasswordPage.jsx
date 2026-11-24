@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { authAPI } from '../services/api';
 import Logo from '../components/Logo';
-import { KeyRound, Mail, ArrowLeft, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { KeyRound, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 export default function ForgotPasswordPage({ onNavigate }) {
   const [step, setStep] = useState(1); // 1: Email, 2: Reset Code & New Password, 3: Success

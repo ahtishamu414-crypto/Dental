@@ -25,9 +25,13 @@ async def generate_response(
     """
     Generate an AI response using live MongoDB clinic knowledge and multi-turn context.
     """
-    # Fetch live prompt from MongoDB
-    knowledge_service = get_knowledge_service("bright_smile_dental")
-    clinic_knowledge = await knowledge_service.format_knowledge_for_prompt()
+    # Fetch live prompt from MongoDB (with graceful fallback if DB is initializing or offline)
+    clinic_knowledge = ""
+    try:
+        knowledge_service = get_knowledge_service("bright_smile_dental")
+        clinic_knowledge = await knowledge_service.format_knowledge_for_prompt()
+    except Exception as e:
+        print(f"[WARN] Failed to load live clinic knowledge from DB: {e}")
 
     system_prompt = f"""
 You are the AI receptionist for Bright Smile Dental, a dental clinic in New York.
@@ -85,6 +89,7 @@ If the user needs human assistance, provide:
 
     conversation = [{"role": "system", "content": system_prompt}]
 
+    user_query = ""
     if messages and len(messages) > 0:
         recent = messages[-10:]
         for m in recent:
@@ -92,14 +97,77 @@ If the user needs human assistance, provide:
             content = m.get("content")
             if role in ["user", "assistant"] and content:
                 conversation.append({"role": role, "content": str(content)})
+                if role == "user":
+                    user_query = str(content)
     elif message:
         conversation.append({"role": "user", "content": str(message)})
+        user_query = str(message)
 
-    response = await client.chat.completions.create(
-        model="openai/gpt-oss-20b",
-        messages=conversation,
-        max_tokens=400,
-        temperature=0.3
+    try:
+        response = await client.chat.completions.create(
+            model="openai/gpt-oss-20b",
+            messages=conversation,
+            max_tokens=650,
+            temperature=0.3
+        )
+        content = (response.choices[0].message.content or "").strip()
+        if not content:
+            return _local_knowledge_fallback(user_query)
+        return content
+    except Exception as err:
+        print(f"[WARN] Groq AI completion error: {err}. Using local clinic knowledge fallback.")
+        return _local_knowledge_fallback(user_query)
+
+
+def _local_knowledge_fallback(user_text: str) -> str:
+    text = (user_text or "").lower()
+    if any(k in text for k in ["price", "cost", "how much", "rate", "fee"]):
+        return (
+            "Here are our current service prices at Bright Smile Dental:\n\n"
+            "- General Checkup: Comprehensive oral examination with X-rays ($150)\n"
+            "- Professional Cleaning: Tartar and plaque removal ($200)\n"
+            "- Teeth Whitening: In-office brightening treatment ($450)\n"
+            "- Dental Fillings: Composite resin fillings ($250 per tooth)\n"
+            "- Root Canal Therapy: Endodontic treatment ($1,200)\n"
+            "- Tooth Extraction: Simple extraction of damaged teeth ($300)\n"
+            "- Orthodontic Consult: Invisalign / Braces assessment ($180)\n\n"
+            "Would you like to schedule an appointment for any of these treatments?"
+        )
+    if any(k in text for k in ["hour", "open", "time", "close", "schedule", "weekend"]):
+        return (
+            "Our clinic hours at Bright Smile Dental are:\n\n"
+            "- Monday to Wednesday: 9:00 AM – 6:00 PM\n"
+            "- Thursday: 9:00 AM – 8:00 PM (Late evening)\n"
+            "- Friday: 9:00 AM – 5:00 PM\n"
+            "- Saturday: 10:00 AM – 2:00 PM\n"
+            "- Sunday: Closed\n\n"
+            "Call (212) 555-0199 or click 'Book Visit' above to request your slot!"
+        )
+    if any(k in text for k in ["doctor", "dentist", "specialist", "staff", "who"]):
+        return (
+            "Our clinical team at Bright Smile Dental includes:\n\n"
+            "- Dr. Sarah Jenkins: General & Preventative Dentistry\n"
+            "- Dr. Michael Chen: Orthodontics & Cosmetic Dentistry\n"
+            "- Dr. Emily Rodriguez: Oral Surgery & Endodontics\n\n"
+            "You can choose a specific doctor or select 'Any Available Doctor' for the earliest appointment."
+        )
+    if any(k in text for k in ["insurance", "cigna", "delta", "metlife", "aetna", "coverage", "pay"]):
+        return (
+            "Yes! We accept major dental insurance providers including Delta Dental, Cigna, MetLife, and Aetna. "
+            "We also provide transparent pricing and itemized receipts for HSA/FSA claims."
+        )
+    if any(k in text for k in ["book", "appointment", "visit", "schedule", "reserve"]):
+        return (
+            "You can easily request an appointment online in under 60 seconds! "
+            "Simply click the 'Book Visit' button at the top right of this chat, choose your preferred dentist, date, and service."
+        )
+    if any(k in text for k in ["address", "location", "where", "directions", "map"]):
+        return (
+            "Bright Smile Dental is located at 123 Demo Avenue, Midtown Manhattan, NY 10001. "
+            "Convenient to major transit with validated nearby parking. Phone: (212) 555-0199."
+        )
+    return (
+        "Welcome to Bright Smile Dental! I am here to help you with service prices, opening hours, dentists, "
+        "and booking appointment requests.\n\n"
+        "Feel free to ask a question or click 'Book Visit' at the top of the chat to schedule care!"
     )
-
-    return response.choices[0].message.content
