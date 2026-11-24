@@ -3,6 +3,7 @@ import { IMAGES } from '../data/siteData';
 import drSarah from '../assets/images/dr-sarah-jenkins.jpg';
 import drMichael from '../assets/images/dr-michael-chen.jpg';
 import drEmily from '../assets/images/dr-emily-rodriguez.jpg';
+import useScrollReveal from '../hooks/useScrollReveal';
 
 const VALUES = [
   { title: 'Compassion', desc: 'We treat every patient like family.', icon: Heart },
@@ -44,6 +45,13 @@ const TEAM = [
 ];
 
 export default function About({ onOpenModal }) {
+  const storyRef = useScrollReveal('.reveal-left, .reveal-right');
+  const mvRef = useScrollReveal('.reveal');
+  const valuesRef = useScrollReveal('.reveal', { stagger: 120 });
+  const teamRef = useScrollReveal('.reveal', { stagger: 150 });
+  const whyRef = useScrollReveal('.reveal-scale');
+  const ctaRef = useScrollReveal('.reveal-scale');
+
   return (
     <>
       <section className="page-hero" style={{ backgroundImage: `url(${IMAGES.aboutHero})` }}>
@@ -53,10 +61,10 @@ export default function About({ onOpenModal }) {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section" ref={storyRef}>
         <div className="container split">
-          <div className="split-photo" style={{ backgroundImage: `url(${IMAGES.story})` }} role="img" aria-label="Dentist treating a patient" />
-          <div>
+          <div className="split-photo reveal-left" style={{ backgroundImage: `url(${IMAGES.story})` }} role="img" aria-label="Dentist treating a patient" />
+          <div className="reveal-right">
             <h2>Our Story</h2>
             <p>
               Bright Smile Dental was founded with a simple mission: to provide high-quality, compassionate dental
@@ -71,14 +79,14 @@ export default function About({ onOpenModal }) {
         </div>
       </section>
 
-      <section className="container" style={{ paddingBottom: 64 }}>
+      <section className="container" ref={mvRef} style={{ paddingBottom: 64 }}>
         <div className="grid-2">
-          <div className="mv-card">
+          <div className="mv-card reveal">
             <span className="icon-tile"><Target size={20} /></span>
             <h3>Our Mission</h3>
             <p>To improve oral health and transform lives through exceptional dental care, education, and lasting relationships with our patients.</p>
           </div>
-          <div className="mv-card">
+          <div className="mv-card reveal">
             <span className="icon-tile"><Eye size={20} /></span>
             <h3>Our Vision</h3>
             <p>To be the most trusted and preferred dental clinic, known for our excellence in care, innovation, and patient satisfaction.</p>
@@ -86,14 +94,14 @@ export default function About({ onOpenModal }) {
         </div>
       </section>
 
-      <section className="container" style={{ paddingBottom: 64 }}>
-        <div className="section-head" style={{ textAlign: 'left', margin: '0 0 28px' }}>
+      <section className="container" ref={valuesRef} style={{ paddingBottom: 64 }}>
+        <div className="section-head reveal" style={{ textAlign: 'left', margin: '0 0 28px' }}>
           <h2>Our Values</h2>
           <p>The principles that guide everything we do.</p>
         </div>
         <div className="grid-4">
           {VALUES.map(({ title, desc, icon: Icon }) => (
-            <div key={title} className="value feature">
+            <div key={title} className="value feature reveal">
               <div className="feature-icon"><Icon size={26} /></div>
               <h3>{title}</h3>
               <p>{desc}</p>
@@ -102,15 +110,15 @@ export default function About({ onOpenModal }) {
         </div>
       </section>
 
-      <section className="section section-alt">
+      <section className="section section-alt" ref={teamRef}>
         <div className="container">
-          <div className="section-head">
+          <div className="section-head reveal">
             <h2>Meet Our Clinical Specialists</h2>
             <p>Board-certified dentists and hygienists dedicated to your comfort.</p>
           </div>
           <div className="grid-3">
             {TEAM.map((m) => (
-              <article key={m.name} className="service-card" style={{ display: 'flex', flexDirection: 'column' }}>
+              <article key={m.name} className="service-card reveal" style={{ display: 'flex', flexDirection: 'column' }}>
                 <div className="service-photo tall" style={{ backgroundImage: `url(${m.image})` }} role="img" aria-label={m.name} />
                 <div className="team-body" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                   <span className="badge badge-pending" style={{ alignSelf: 'flex-start' }}>{m.experience}</span>
@@ -131,8 +139,8 @@ export default function About({ onOpenModal }) {
         </div>
       </section>
 
-      <section className="container" style={{ padding: '64px 20px 0' }}>
-        <div className="why-panel">
+      <section className="container" ref={whyRef} style={{ padding: '64px 20px 0' }}>
+        <div className="why-panel reveal-scale">
           <div className="split-photo" style={{ backgroundImage: `url(${IMAGES.whyUs})` }} role="img" aria-label="Smiling dentist" />
           <div className="why-body">
             <h3>Why Choose Us?</h3>
@@ -145,8 +153,8 @@ export default function About({ onOpenModal }) {
         </div>
       </section>
 
-      <section className="container" style={{ padding: '64px 20px 0' }}>
-        <div className="cta-band">
+      <section className="container" ref={ctaRef} style={{ padding: '64px 20px 0' }}>
+        <div className="cta-band reveal-scale">
           <h2>Ready to Experience Better Dental Care?</h2>
           <p>Book your consultation online or talk with our 24/7 AI receptionist directly.</p>
           <button type="button" className="btn-primary" onClick={onOpenModal}>Schedule Your Appointment</button>

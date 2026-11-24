@@ -301,9 +301,11 @@ export default function ChatWidget({ onOpenModal }) {
             ))}
             {loading && (
               <div className="bsc-typing">
-                <span className="bsc-dot" />
-                <span className="bsc-dot" />
-                <span className="bsc-dot" />
+                <div className="typing-indicator">
+                  <span className="typing-dot" />
+                  <span className="typing-dot" />
+                  <span className="typing-dot" />
+                </div>
                 <span>AI receptionist is thinking…</span>
               </div>
             )}

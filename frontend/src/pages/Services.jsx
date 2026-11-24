@@ -1,3 +1,5 @@
+import useScrollReveal from '../hooks/useScrollReveal';
+
 const SERVICES = [
   { name: 'General Checkup', price: '$150', duration: '30m', desc: 'Comprehensive oral examination including digital low-radiation X-rays and cavity screening.', popular: true },
   { name: 'Professional Cleaning', price: '$200', duration: '45m', desc: 'Plaque and tartar removal by registered hygienists followed by enamel polishing.', popular: true },
@@ -9,6 +11,8 @@ const SERVICES = [
 ];
 
 export default function Services({ onOpenModal }) {
+  const cardsRef = useScrollReveal('.reveal', { stagger: 90 });
+
   return (
     <>
       <section className="page-hero">
@@ -19,10 +23,10 @@ export default function Services({ onOpenModal }) {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section" ref={cardsRef}>
         <div className="container grid-3">
           {SERVICES.map((s) => (
-            <article key={s.name} className="card price-card">
+            <article key={s.name} className="card price-card reveal">
               <div className="title-row">
                 <div>
                   <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

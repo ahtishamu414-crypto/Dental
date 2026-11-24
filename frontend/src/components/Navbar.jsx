@@ -13,6 +13,14 @@ const LINKS = [
 export default function Navbar({ page, onNavigate, onOpenModal }) {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  // Navbar shrink on scroll
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Close on Escape or page change
   useEffect(() => {
@@ -45,7 +53,7 @@ export default function Navbar({ page, onNavigate, onOpenModal }) {
 
   return (
     <>
-      <header className="navbar">
+      <header className={`navbar ${scrolled ? 'scrolled' : ''}`}>
         <div className="container nav-inner">
           <a href="#home" className="logo" onClick={go('home')}>
             <Logo /> Bright Smile Dental

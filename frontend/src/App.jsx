@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ChatWidget from './components/ChatWidget';
+import ScrollToTop from './components/ScrollToTop';
 import AppointmentModal from './components/AppointmentModal';
 import HomePage from './pages/HomePage';
 import About from './pages/About';
@@ -14,6 +15,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import PatientDashboard from './pages/PatientDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import './styles/bright-smile.css';
+import './styles/animations.css';
 
 function App() {
   const { loading } = useAuth();
@@ -93,6 +95,7 @@ function App() {
 
       {/* Mounted once so it stays fixed in the corner on every page */}
       {!isAuthPage && <ChatWidget onOpenModal={openModal} />}
+      {!isAuthPage && <ScrollToTop />}
       <AppointmentModal
         isOpen={modalOpen}
         onClose={closeModal}

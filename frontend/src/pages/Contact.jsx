@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { MapPin, Phone, Mail, Send } from 'lucide-react';
 import { CLINIC, IMAGES } from '../data/siteData';
+import useScrollReveal from '../hooks/useScrollReveal';
 
 const MAP_SRC =
   'https://www.openstreetmap.org/export/embed.html?bbox=-74.0100%2C40.7400%2C-73.9600%2C40.7700&layer=mapnik&marker=40.7527%2C-73.9972';
 
 export default function Contact({ onOpenModal, onNavigate }) {
   const [submitted, setSubmitted] = useState(false);
+  const formRef = useScrollReveal('.reveal-left, .reveal-right, .reveal-scale');
+  const ctaRef = useScrollReveal('.reveal-scale');
 
   // NOTE: this only shows the thank-you message; nothing is sent to a server yet.
   const handleContactSubmit = (e) => {
@@ -23,10 +26,10 @@ export default function Contact({ onOpenModal, onNavigate }) {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section" ref={formRef}>
         <div className="container">
           <div className="contact-grid">
-            <div>
+            <div className="reveal-left">
               <h2>Get in Touch</h2>
               <p className="lead">We’d love to hear from you. Fill out the form below and we’ll get back to you as soon as possible.</p>
 
@@ -59,7 +62,7 @@ export default function Contact({ onOpenModal, onNavigate }) {
               )}
             </div>
 
-            <aside>
+            <aside className="reveal-right">
               <h2 style={{ marginBottom: 18 }}>Clinic Information</h2>
               <div className="info-item">
                 <span className="icon-tile"><MapPin size={18} /></span>
@@ -88,14 +91,14 @@ export default function Contact({ onOpenModal, onNavigate }) {
             </aside>
           </div>
 
-          <div className="map-box" style={{ marginTop: 40 }}>
+          <div className="map-box reveal-scale" style={{ marginTop: 40 }}>
             <iframe title="Clinic location map" src={MAP_SRC} loading="lazy" />
           </div>
         </div>
       </section>
 
-      <section className="container" style={{ paddingBottom: 64 }}>
-        <div className="cta-band">
+      <section className="container" ref={ctaRef} style={{ paddingBottom: 64 }}>
+        <div className="cta-band reveal-scale">
           <h2>Ready for a Healthier, Brighter Smile?</h2>
           <p>Book your appointment today and take the first step towards better oral health.</p>
           <button type="button" className="btn-primary" onClick={onOpenModal}>Book Appointment</button>

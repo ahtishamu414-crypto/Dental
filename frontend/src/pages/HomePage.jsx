@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Sparkles, Smile, ShieldCheck, Crown, Stethoscope, Cpu, Armchair,
   HeartHandshake, CalendarCheck, Building2, ArrowRight,
 } from 'lucide-react';
 import heroDentalImg from '../assets/images/hero-dental.jpg';
 import { IMAGES } from '../data/siteData';
+import useScrollReveal from '../hooks/useScrollReveal';
 
 const SERVICES = [
   { title: 'Teeth Cleaning', desc: 'Keep your teeth healthy and your smile bright.', icon: Sparkles, img: IMAGES.cleaning },
@@ -35,9 +36,62 @@ const REVIEWS = [
 
 const initials = (name) => name.split(' ').map((p) => p[0]).join('');
 
+function AnimatedStat({ value, suffix = '', label, isFloat = false }) {
+  const [count, setCount] = useState(0);
+  const statRef = useRef(null);
+
+  useEffect(() => {
+    const el = statRef.current;
+    if (!el) return;
+
+    let started = false;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !started) {
+          started = true;
+          const startTime = performance.now();
+          const duration = 1600;
+          const target = isFloat ? Math.round(value * 10) : value;
+
+          const step = (now) => {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setCount(Math.round(eased * target));
+            if (progress < 1) requestAnimationFrame(step);
+          };
+          requestAnimationFrame(step);
+        }
+      },
+      { threshold: 0.2 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [value, isFloat]);
+
+  const display = isFloat ? (count / 10).toFixed(1) : count.toLocaleString();
+
+  return (
+    <div ref={statRef}>
+      <div className="stat-number" style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--teal)' }}>
+        {display}{suffix}
+      </div>
+      <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>{label}</div>
+    </div>
+  );
+}
+
 export default function HomePage({ onOpenModal, onNavigate }) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
+
+  // Scroll reveal refs for each section
+  const servicesRef = useScrollReveal('.reveal');
+  const featuresRef = useScrollReveal('.reveal', { stagger: 120 });
+  const aiRef = useScrollReveal('.reveal-scale');
+  const stepsRef = useScrollReveal('.reveal');
+  const reviewsRef = useScrollReveal('.reveal');
+  const ctaRef = useScrollReveal('.reveal-scale');
 
   const go = (page) => (e) => {
     e.preventDefault();
@@ -68,6 +122,13 @@ export default function HomePage({ onOpenModal, onNavigate }) {
               <a href="#services" className="btn-link" onClick={go('services')} style={{ marginLeft: 6 }}>
                 Explore Services →
               </a>
+            </div>
+
+            {/* Animated Trust Stats */}
+            <div style={{ display: 'flex', gap: 28, marginTop: 28, flexWrap: 'wrap' }}>
+              <AnimatedStat value={2400} suffix="+" label="Smiles Restored" />
+              <AnimatedStat value={4.9} suffix=" ★" label="Patient Rating" isFloat />
+              <AnimatedStat value={14} suffix="+" label="Years Experience" />
             </div>
           </div>
           <div className="hero-photo-wrap">
@@ -118,15 +179,15 @@ export default function HomePage({ onOpenModal, onNavigate }) {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section" ref={servicesRef}>
         <div className="container">
-          <div className="section-head">
+          <div className="section-head reveal">
             <h2>Our Dental Services</h2>
             <p>Comprehensive dental care for a healthier, brighter smile.</p>
           </div>
           <div className="grid-4">
             {SERVICES.map(({ title, desc, icon: Icon, img }) => (
-              <article key={title} className="service-card">
+              <article key={title} className="service-card reveal">
                 <div className="service-photo" style={{ backgroundImage: `url(${img})` }} />
                 <div className="service-body">
                   <span className="service-icon"><Icon size={18} /></span>
@@ -152,15 +213,15 @@ export default function HomePage({ onOpenModal, onNavigate }) {
         </div>
       </section>
 
-      <section className="section section-band">
+      <section className="section section-band" ref={featuresRef}>
         <div className="container">
-          <div className="section-head">
+          <div className="section-head reveal">
             <h2>Why Choose Bright Smile Dental?</h2>
-            <p>We’re committed to providing exceptional dental care and a positive experience.</p>
+            <p>We're committed to providing exceptional dental care and a positive experience.</p>
           </div>
           <div className="grid-4">
             {FEATURES.map(({ title, desc, icon: Icon }) => (
-              <div key={title} className="feature">
+              <div key={title} className="feature reveal">
                 <div className="feature-icon"><Icon size={28} /></div>
                 <h3>{title}</h3>
                 <p>{desc}</p>
@@ -171,9 +232,9 @@ export default function HomePage({ onOpenModal, onNavigate }) {
       </section>
 
       {/* 24/7 AI Receptionist Showcase */}
-      <section className="section" style={{ background: '#ffffff', paddingTop: 40, paddingBottom: 40 }}>
+      <section className="section" ref={aiRef} style={{ background: '#ffffff', paddingTop: 40, paddingBottom: 40 }}>
         <div className="container">
-          <div className="ai-showcase-panel">
+          <div className="ai-showcase-panel reveal-scale">
             <div>
               <span className="pill" style={{ background: '#1597a5', color: '#fff', marginBottom: 12 }}>
                 ✨ 24/7 AI Dental Receptionist
@@ -244,15 +305,15 @@ export default function HomePage({ onOpenModal, onNavigate }) {
         </div>
       </section>
 
-      <section className="section">
+      <section className="section" ref={stepsRef}>
         <div className="container">
-          <div className="section-head">
+          <div className="section-head reveal">
             <h2>How It Works</h2>
-            <p>Getting started is easy. Here’s how it works.</p>
+            <p>Getting started is easy. Here's how it works.</p>
           </div>
-          <div className="steps">
+          <div className="steps steps-animated">
             {STEPS.map(({ title, desc, icon: Icon }, i) => (
-              <div key={title} className="step">
+              <div key={title} className="step reveal">
                 <span className="step-num">{i + 1}</span>
                 <div>
                   <div className="step-icon"><Icon size={26} /></div>
@@ -265,16 +326,16 @@ export default function HomePage({ onOpenModal, onNavigate }) {
         </div>
       </section>
 
-      <section className="container" style={{ paddingBottom: 64 }}>
-        <div className="panel-dark">
+      <section className="container" ref={reviewsRef} style={{ paddingBottom: 64 }}>
+        <div className="panel-dark reveal-scale">
           <h2>What Our Patients Say</h2>
           <p className="sub">Real stories from real patients. (Fictional demo content)</p>
           <div className="grid-3">
             {REVIEWS.map(({ name, text }) => (
-              <figure key={name} className="quote-card" style={{ margin: 0 }}>
+              <figure key={name} className="quote-card reveal" style={{ margin: 0 }}>
                 <span className="avatar">{initials(name)}</span>
                 <figcaption>
-                  <p>“{text}”</p>
+                  <p>"{text}"</p>
                   <strong>{name}</strong>
                   <span>Patient</span>
                 </figcaption>
@@ -284,9 +345,9 @@ export default function HomePage({ onOpenModal, onNavigate }) {
         </div>
       </section>
 
-      <section className="container" style={{ paddingBottom: 64 }}>
-        <div className="cta-band">
-          <h2>Have questions? We’re here to help.</h2>
+      <section className="container" ref={ctaRef} style={{ paddingBottom: 64 }}>
+        <div className="cta-band reveal-scale">
+          <h2>Have questions? We're here to help.</h2>
           <p>Reach out to our friendly team or chat with our AI receptionist any time.</p>
           <a href="#contact" className="btn-primary" onClick={go('contact')}>Get in Touch</a>
         </div>
