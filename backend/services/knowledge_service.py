@@ -81,11 +81,44 @@ class KnowledgeService:
     # ==================== READ DATA ====================
 
     async def get_clinic_config(self) -> Dict[str, Any]:
-        """Fetch full config document from MongoDB."""
-        await self.seed_from_json_if_empty()
-        collection = self._get_configs_collection()
-        config = await collection.find_one({"clinic_key": self.clinic_name})
-        return config or {}
+        """Fetch full config document from MongoDB, falling back to the local
+        JSON files if the database is unreachable (so the AI receptionist
+        still knows prices, hours, doctors and policies)."""
+        try:
+            await self.seed_from_json_if_empty()
+            collection = self._get_configs_collection()
+            config = await collection.find_one({"clinic_key": self.clinic_name})
+            if config:
+                return config
+        except Exception as e:
+            print(f"[WARN] MongoDB unavailable, using local clinic data files: {e}")
+        return self._load_local_config()
+
+    def _load_local_config(self) -> Dict[str, Any]:
+        """Build the same config document from the local JSON files in
+        knowledge_base/ (same shape as the MongoDB document)."""
+        profile_data = self._read_json("clinic_profile.json")
+        services_data = self._read_json("services.json")
+        policies_data = self._read_json("policies.json")
+        faqs_data = self._read_json("faqs.json")
+
+        services_list = []
+        for s in services_data.get("services", []):
+            services_list.append({
+                "id": s.get("id", s.get("name", "")),
+                "name": s.get("name"),
+                "description": s.get("description"),
+                "price": s.get("price"),
+                "is_active": True
+            })
+
+        return {
+            "clinic_key": self.clinic_name,
+            "profile": profile_data,
+            "services": services_list,
+            "policies": policies_data,
+            "faqs": faqs_data.get("faqs", [])
+        }
 
     async def get_services(self) -> List[Dict[str, Any]]:
         """Get all active services."""

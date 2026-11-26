@@ -34,9 +34,13 @@ def verify_admin_role(current_user: dict):
     description="Retrieve list of services offered by the clinic."
 )
 async def get_services() -> List[Dict[str, Any]]:
-    """Retrieve all clinic services from MongoDB."""
+    """Retrieve all clinic services from MongoDB (local data files if the
+    database is unreachable)."""
     try:
         await connect_to_database()
+    except Exception as e:
+        print(f"[WARN] Database unavailable, serving services from local data: {e}")
+    try:
         service = get_knowledge_service()
         return await service.get_all_services_admin()
     except Exception as e:
