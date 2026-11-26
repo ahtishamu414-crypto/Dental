@@ -19,6 +19,10 @@
     {
       "question": "What should I do if I have a dental emergency?",
       "answer": "Call our office immediately. If it is life-threatening, call 911."
+    },
+    {
+      "question": "How do I track my booking?",
+      "answer": "Sign in to your account and open your Patient Dashboard to see 'My appointment requests' with the status of each booking. You can also call us at (212) 555-0199 and our staff will confirm your booking."
     }
   ]
 }
